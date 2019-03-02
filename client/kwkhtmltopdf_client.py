@@ -58,9 +58,16 @@ def wkhtmltopdf(args):
 
     r = requests.post(url, files=parts)
     r.raise_for_status()
-    with (sys.stdout if output == "-" else open(output, "wb")) as f:
-        for chunk in r.iter_content(chunk_size=CHUNK_SIZE):
-            f.write(chunk)
+
+    if output == "-":
+        if sys.version_info[0] < 3:
+            out = sys.stdout
+        else:
+            out = sys.stdout.buffer
+    else:
+        out = open(output, "wb")
+    for chunk in r.iter_content(chunk_size=CHUNK_SIZE):
+        out.write(chunk)
 
 
 if __name__ == "__main__":
