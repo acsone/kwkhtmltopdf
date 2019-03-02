@@ -9,7 +9,7 @@ import sys
 import requests
 
 
-CHUNK_SIZE = 8192
+CHUNK_SIZE = 2**16
 
 
 class UsageError(Exception):

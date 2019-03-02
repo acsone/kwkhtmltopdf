@@ -11,7 +11,7 @@ import tempfile
 from aiohttp import web
 
 
-CHUNK_SIZE = 8192
+CHUNK_SIZE = 2**16
 
 
 def _wkhtmltopdf_bin():
