@@ -59,11 +59,7 @@ def client(request):
     if request.param == "native":
         yield Client(["wkhtmltopdf"])
     elif request.param == "client":
-        yield Client(
-            [
-                os.path.join(HERE, "..", "client", "kwkhtmltopdf_client.py"),
-            ]
-        )
+        yield Client([os.path.join(HERE, "..", "client", "kwkhtmltopdf_client.py")])
 
 
 def test_noargs(client):
