@@ -1,0 +1,23 @@
+FROM ubuntu:18.04
+
+RUN set -x \
+  && apt update \
+  && apt -y install --no-install-recommends wget ca-certificates \
+  && wget http://security.ubuntu.com/ubuntu/pool/main/libp/libpng/libpng12-0_1.2.54-1ubuntu1.1_amd64.deb -O /tmp/libpng12-0.deb \
+  && echo "b3d7791657429647aaa8f3f2d542cc83173b0abf /tmp/libpng12-0.deb" | sha1sum -c - \
+  && apt -y install --no-install-recommends /tmp/libpng12-0.deb \
+  && wget https://downloads.wkhtmltopdf.org/0.12/0.12.5/wkhtmltox_0.12.5-1.xenial_amd64.deb -O /tmp/wkhtmltox.deb \
+  && echo "ee8ab9c75699d5c2941e13e6499a4c94468da7b8  /tmp/wkhtmltox.deb" | sha1sum -c - \
+  && apt -y install --no-install-recommends /tmp/wkhtmltox.deb \
+  && apt -y install --no-install-recommends python3-pip python3-setuptools \
+  && apt -y clean \
+  && rm -rf /var/lib/apt/lists/*
+
+COPY server/requirements.txt /tmp/
+RUN pip3 install --no-cache --user -r /tmp/requirements.txt
+
+COPY server/kwkhtmltopdf_server.py /usr/local/bin/
+
+EXPOSE 8080
+
+CMD /usr/local/bin/kwkhtmltopdf_server.py
