@@ -18,42 +18,6 @@ def _wkhtmltopdf_bin():
     return os.getenv("KWKHTMLTOPDF_BIN", "wkhtmltopdf")
 
 
-async def wkhtmltopdf_form(request):
-    # TODO improve the look of this form
-    form = """\
-        <htmt>
-            <head>
-                <title>wkhtmltopdf server</title>
-            </head>
-            <body>
-                <h1>wkhtmltopdf server</h1>
-                <form action="/" method="post"
-                      enctype="multipart/form-data">
-                    Options<br>
-                    <input name="option" type="text" value="-O"><br>
-                    <input name="option" type="text" value="portrait"><br>
-                    <input name="option" type="text"><br>
-                    <input name="option" type="text"><br>
-                    <input name="option" type="text"><br>
-                    <input name="option" type="text"><br>
-                    Url to convert<br>
-                    <input name="option" type="text"
-                           value="https://wkhtmltopdf.org" autofocus><br>
-                    File to convert<br>
-                    <input name="file" type="file"><br>
-                    <br>
-                    <input type="submit" value="Convert to PDF!"><br>
-                </form>
-                <i>
-                    Brought to you by
-                    <a href="https://acsone.eu">ACSONE SA/NV</href>.
-                </i>
-            </body>
-        </html>
-    """
-    return web.Response(text=form, content_type="text/html")
-
-
 async def wkhtmltopdf(request):
     # TODO handle empty requests (without args)
     reader = await request.multipart()
@@ -129,5 +93,5 @@ async def wkhtmltopdf(request):
 
 if __name__ == "__main__":
     app = web.Application()
-    app.add_routes([web.post("/", wkhtmltopdf), web.get("/", wkhtmltopdf_form)])
+    app.add_routes([web.post("/", wkhtmltopdf)])
     web.run_app(app)
