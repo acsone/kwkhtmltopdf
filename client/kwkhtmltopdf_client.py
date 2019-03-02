@@ -2,6 +2,7 @@
 # Copyright (c) 2019 ACSONE SA/NV
 # Distributed under the MIT License (http://opensource.org/licenses/MIT)
 
+from __future__ import print_function
 import os
 import sys
 
@@ -9,6 +10,10 @@ import requests
 
 
 CHUNK_SIZE = 8192
+
+
+class UsageError(Exception):
+    pass
 
 
 def wkhtmltopdf(args):
@@ -22,6 +27,9 @@ def wkhtmltopdf(args):
     def add_file(filename):
         with open(filename, "rb") as f:
             parts.append(("file", (filename, f.read())))
+
+    if "-" in args:
+        raise UsageError("stdin/stdout input is not implemented")
 
     output = "-"
     if args and not args[-1].startswith("-"):
@@ -50,11 +58,14 @@ def wkhtmltopdf(args):
 
     r = requests.post(url, files=parts)
     r.raise_for_status()
-    # TODO sys.stdout.buffer does not work with python2
-    with (sys.stdout.buffer if output == "-" else open(output, "wb")) as f:
+    with (sys.stdout if output == "-" else open(output, "wb")) as f:
         for chunk in r.iter_content(chunk_size=CHUNK_SIZE):
             f.write(chunk)
 
 
 if __name__ == "__main__":
-    wkhtmltopdf(sys.argv[1:])
+    try:
+        wkhtmltopdf(sys.argv[1:])
+    except UsageError as e:
+        print(e, file=sys.stderr)
+        sys.exit(-1)
