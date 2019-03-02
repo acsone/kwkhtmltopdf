@@ -11,11 +11,17 @@ import tempfile
 from aiohttp import web
 
 
-CHUNK_SIZE = 2**16
+CHUNK_SIZE = 2 ** 16
 
 
 def _wkhtmltopdf_bin():
     return os.getenv("KWKHTMLTOPDF_BIN", "wkhtmltopdf")
+
+
+def _is_pdf_command(args):
+    args = set(args)
+    no_pdf_options = set(("-V", "--version", "-h", "--help", "-H", "--extended-help"))
+    return not bool(args & no_pdf_options)
 
 
 async def wkhtmltopdf(request):
@@ -35,13 +41,13 @@ async def wkhtmltopdf(request):
                     continue
                 args.append(option)
             elif part.name == "file":
-                # TODO validate filename?
                 assert part.filename
                 # It's important to preserve as much as possible of the
                 # original filename because some javascript can depend on it
                 # through document.location.
-                # TODO what if multiple files with same basename?
                 filename = os.path.join(tmpdir, os.path.basename(part.filename))
+                # TODO what if multiple files with same basename?
+                assert not os.path.exists(filename)
                 with open(filename, "wb") as f:
                     while True:
                         chunk = await part.read_chunk(CHUNK_SIZE)
@@ -49,43 +55,31 @@ async def wkhtmltopdf(request):
                             break
                         f.write(chunk)
                     args.append(filename)
-        with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False, dir=tmpdir) as f:
-            output = f.name
-        # run wkhtmltopdf
-        cmd = [_wkhtmltopdf_bin()] + args + [output]
+        is_pdf_command = _is_pdf_command(args)
+        # run wkhtmltopdf and stream response
+        if is_pdf_command:
+            args.append("-")
+        cmd = [_wkhtmltopdf_bin()] + args
+        print(">", " ".join(cmd), file=sys.stderr)
         proc = await asyncio.create_subprocess_exec(
-            *cmd, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE
+            *cmd, stdout=asyncio.subprocess.PIPE
         )
-        stdout_data, stderr_data = await proc.communicate()
-        r = proc.returncode
-        print(" ".join(cmd), file=sys.stderr)
-        sys.stderr.buffer.write(stderr_data)
-        print("=>", r, file=sys.stderr)
-        # return result
-        if r != 0:
-            # error
-            response = web.Response(text=stderr_data.decode(), status=400)
-        elif not os.path.exists(output) or not os.path.getsize(output):
-            # version or help
-            response = web.Response(text=stdout_data.decode(), status=200)
-        else:
-            # pdf
-            # TODO stream wkhtmltopdf output directly to response,
-            # TODO but then how to report errors?
-            # TODO With chunked encoding, closing connection informs the client
-            # TODO that something is wrong, but there is no way to report
-            # TODO an error message (except trailer headers, maybe, not
-            # TODO sure if many HTTP clients support that).
-            response = web.StreamResponse(status=200)
-            response.enable_chunked_encoding()
+        response = web.StreamResponse(status=200)
+        response.enable_chunked_encoding()
+        if is_pdf_command:
             response.content_type = "application/pdf"
-            await response.prepare(request)
-            with open(output, "rb") as f:
-                while True:
-                    chunk = f.read(CHUNK_SIZE)
-                    await response.write(chunk)
-                    if len(chunk) != CHUNK_SIZE:
-                        break
+        else:
+            response.content_type = "text/plain"
+        await response.prepare(request)
+        while True:
+            chunk = await proc.stdout.read()
+            if not chunk:
+                break
+            await response.write(chunk)
+        r = await proc.wait()
+        if r != 0:
+            raise web.HTTPException()
+        print("<", " ".join(cmd), file=sys.stderr)
         return response
     finally:
         shutil.rmtree(tmpdir)

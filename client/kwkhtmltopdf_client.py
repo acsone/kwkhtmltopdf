@@ -9,10 +9,18 @@ import sys
 import requests
 
 
-CHUNK_SIZE = 2**16
+CHUNK_SIZE = 2 ** 16
 
 
-class UsageError(Exception):
+class Error(Exception):
+    pass
+
+
+class UsageError(Error):
+    pass
+
+
+class ServerError(Error):
     pass
 
 
@@ -56,23 +64,28 @@ def wkhtmltopdf(args):
     if not parts:
         add_option("-h")
 
-    r = requests.post(url, files=parts)
-    r.raise_for_status()
+    try:
+        r = requests.post(url, files=parts)
+        r.raise_for_status()
 
-    if output == "-":
-        if sys.version_info[0] < 3:
-            out = sys.stdout
+        if output == "-":
+            if sys.version_info[0] < 3:
+                out = sys.stdout
+            else:
+                out = sys.stdout.buffer
         else:
-            out = sys.stdout.buffer
-    else:
-        out = open(output, "wb")
-    for chunk in r.iter_content(chunk_size=CHUNK_SIZE):
-        out.write(chunk)
+            out = open(output, "wb")
+        for chunk in r.iter_content(chunk_size=CHUNK_SIZE):
+            out.write(chunk)
+    except requests.exceptions.ChunkedEncodingError:
+        # TODO look if client and server could use trailer headers
+        # TODO to report errors
+        raise ServerError("kwkhtmltopdf server error, consult server log")
 
 
 if __name__ == "__main__":
     try:
         wkhtmltopdf(sys.argv[1:])
-    except UsageError as e:
+    except Error as e:
         print(e, file=sys.stderr)
         sys.exit(-1)
