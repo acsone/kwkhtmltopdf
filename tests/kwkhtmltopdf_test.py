@@ -39,19 +39,12 @@ class Client:
         assert r != 0
 
     def _run_expect_file(self, args, expected_data_file):
-        f = tempfile.NamedTemporaryFile(delete=False)
-        try:
-            f.close()
-            r = subprocess.call(
-                self.cmd + args + [f.name], cwd=os.path.join(HERE, "data")
-            )
-            assert r == 0
-            expected = Image(filename=os.path.join(HERE, "data", expected_data_file))
-            actual = Image(filename=f.name)
-            diff = actual.compare(expected, metric="root_mean_square")
-            assert diff[1] < 0.01
-        finally:
-            os.remove(f.name)
+        r = subprocess.call(self.cmd + args, cwd=os.path.join(HERE, "data"))
+        assert r == 0
+        expected = Image(filename=os.path.join(HERE, "data", expected_data_file))
+        actual = Image(filename=str(args[-1]))
+        diff = actual.compare(expected, metric="root_mean_square")
+        assert diff[1] < 0.01
 
 
 @pytest.fixture(
@@ -104,5 +97,23 @@ def test_version(client):
     assert re.search("wkhtmltopdf [\d\.]+ ", out)
 
 
-def test_1(client):
-    client._run_expect_file(["test1.html"], "test1.pdf")
+def test_1(client, tmp_path):
+    client._run_expect_file(["test1.html", tmp_path / "o.pdf"], "test1.pdf")
+
+
+def test_bad_option(client):
+    client._run_expect_error(["--not-an-option"])
+
+
+def test_not_found(client, tmp_path):
+    client._run_expect_error(["https://github.com/acsone/notfound", tmp_path / "o.pdf"])
+
+
+def test_image_not_found(client, tmp_path):
+    client._run_expect_file(
+        ["--load-media-error-handling", "ignore", "test2.html", tmp_path / "o.pdf"],
+        "test2.pdf",
+    )
+    client._run_expect_error(
+        ["--load-media-error-handling", "abort", "test2.html", tmp_path / "o.pdf"]
+    )
