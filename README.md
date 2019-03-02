@@ -15,8 +15,16 @@ It should work with any python version supported by `requests`.
 
 # TODO
 
-- tests
+- more tests
 - see TODO source code for some (important) improvements
+
+# WARNING
+
+The server is not meant to be exposed to untrusted clients.
+
+Several attack vectors exist (local file access being the most obvious).
+Mitigating them is not currently a priority, since the main use case is
+to use it as a private service.
 
 # Credits
 
