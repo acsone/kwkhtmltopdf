@@ -16,7 +16,6 @@ It should work with any python version supported by `requests`.
 # TODO
 
 - tests
-- container images for the server and various wkhtmltopdf versions
 - see TODO source code for some (important) improvements
 
 # Credits
