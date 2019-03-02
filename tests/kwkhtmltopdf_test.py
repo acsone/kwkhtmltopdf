@@ -9,7 +9,6 @@ Before running these tests,
 import os
 import re
 import subprocess
-import tempfile
 
 import pytest
 from wand.image import Image
