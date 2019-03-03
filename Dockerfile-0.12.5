@@ -14,10 +14,12 @@ RUN set -x \
   && rm -rf /var/lib/apt/lists/*
 
 COPY server/requirements.txt /tmp/
-RUN pip3 install --no-cache --user -r /tmp/requirements.txt
+RUN pip3 install --no-cache -r /tmp/requirements.txt
 
 COPY server/kwkhtmltopdf_server.py /usr/local/bin/
 
-EXPOSE 8080
+RUN adduser --disabled-password --gecos '' kwkhtmltopdf
+USER kwkhtmltopdf
 
+EXPOSE 8080
 CMD /usr/local/bin/kwkhtmltopdf_server.py
