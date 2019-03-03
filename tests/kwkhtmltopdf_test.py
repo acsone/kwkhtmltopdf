@@ -16,6 +16,10 @@ from wand.image import Image
 HERE = os.path.dirname(__file__)
 
 
+def _wkhtmltopdf_bin():
+    return os.getenv("KWKHTMLTOPDF_BIN", "wkhtmltopdf")
+
+
 class Client:
     def __init__(self, cmd):
         self.cmd = cmd
@@ -50,7 +54,7 @@ class Client:
 )
 def client(request):
     if request.param == "native":
-        yield Client(["wkhtmltopdf"])
+        yield Client([_wkhtmltopdf_bin()])
     elif request.param == "client":
         # run the client with same python as test suite
         yield Client(
