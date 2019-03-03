@@ -3,11 +3,11 @@
 # Distributed under the MIT License (http://opensource.org/licenses/MIT)
 
 from __future__ import print_function
+
 import os
 import sys
 
 import requests
-
 
 CHUNK_SIZE = 2 ** 16
 

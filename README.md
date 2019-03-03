@@ -1,14 +1,14 @@
 # kwkhtmltopdf_server
 
-A web server accepting wkhtmlpdf options and files to convert
-as multipart form data.
+A web server accepting [wkhtmlpdf](https://wkhtmltopdf.org) options and files
+to convert as multipart form data.
 
 It requires python 3.6 or greater.
 
 # kwkhtmltopdf_client
 
-A drop-in replacement for wkhtmltopdf, which invokes the above server
-defined in the KWKHTMLTOPDF_SERVER_URL environment variable.
+A drop-in replacement for [wkhtmlpdf](https://wkhtmltopdf.org) which invokes
+the above server defined in the `KWKHTMLTOPDF_SERVER_URL` environment variable.
 
 It's only dependency is the `requests` library.
 It should work with any python version supported by `requests`.
@@ -32,10 +32,16 @@ $ env KWKHTMLTOPDF_SERVER_URL=http://localhost:8080 \
 
 This should generate a printout of the wkhtmltopdf home page to /tmp/test.pdf.
 
+# Run tests
+
+1. Start the server.
+2. Set and export `KWKHTMLTOPDF_SERVER_URL` environment variable.
+3. Run `tox`.
+
 # TODO
 
 - A few more tests.
-- See also some TODO in source code (most important one is probably 
+- See also some TODO in source code (most important one is probably
   detection of file arguments in the client).
 - Write an alternative client (in go?) that is easier to deploy
   and starts faster than the python one.

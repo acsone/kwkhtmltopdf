@@ -10,7 +10,6 @@ import tempfile
 
 from aiohttp import web
 
-
 CHUNK_SIZE = 2 ** 16
 
 
@@ -20,7 +19,7 @@ def _wkhtmltopdf_bin():
 
 def _is_pdf_command(args):
     args = set(args)
-    no_pdf_options = set(("-V", "--version", "-h", "--help", "-H", "--extended-help"))
+    no_pdf_options = {"-V", "--version", "-h", "--help", "-H", "--extended-help"}
     return not bool(args & no_pdf_options)
 
 
@@ -32,7 +31,7 @@ async def wkhtmltopdf(request):
     try:
         # read arguments, store files in temporary files
         while True:
-            part = await reader.next()
+            part = await reader.next()  # noqa: B305
             if not part:
                 break
             if part.name == "option":

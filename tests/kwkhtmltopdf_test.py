@@ -13,7 +13,6 @@ import subprocess
 import pytest
 from wand.image import Image
 
-
 HERE = os.path.dirname(__file__)
 
 
@@ -95,7 +94,7 @@ def test_extended_help(client):
 
 def test_version(client):
     out = client._run_stdout(["--version"])
-    assert re.search("wkhtmltopdf [\d\.]+ ", out)
+    assert re.search(r"wkhtmltopdf [\d\.]+ ", out)
 
 
 def test_1(client, tmp_path):
