@@ -54,13 +54,15 @@ def client(request):
         yield Client(["wkhtmltopdf"])
     elif request.param == "client":
         # run the client with same python as test suite
-        yield Client([os.path.join(HERE, "..", "client", "kwkhtmltopdf_client.py")])
+        yield Client(
+            [os.path.join(HERE, "..", "client", "python", "kwkhtmltopdf_client.py")]
+        )
     elif request.param == "client_sys_py2":
         # run the client with the system python2
         yield Client(
             [
                 "/usr/bin/python2",
-                os.path.join(HERE, "..", "client", "kwkhtmltopdf_client.py"),
+                os.path.join(HERE, "..", "client", "python", "kwkhtmltopdf_client.py"),
             ]
         )
     elif request.param == "client_sys_py3":
@@ -68,7 +70,7 @@ def client(request):
         yield Client(
             [
                 "/usr/bin/python3",
-                os.path.join(HERE, "..", "client", "kwkhtmltopdf_client.py"),
+                os.path.join(HERE, "..", "client", "python", "kwkhtmltopdf_client.py"),
             ]
         )
 

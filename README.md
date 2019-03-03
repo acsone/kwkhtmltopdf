@@ -17,7 +17,7 @@ It should work with any python version supported by `requests`.
 
 ## Run the server
 
-```console
+```
 $ docker run -it --rm -p 8080:8080 acsone/kwhkhtmltopdf
 ```
 
@@ -25,9 +25,9 @@ The server should now listen on http://localhost:8080.
 
 ## Run the client
 
-```console
+```
 $ env KWKHTMLTOPDF_SERVER_URL=http://localhost:8080 \
-    client/kwkhtmltopdf_client.py https://wkhtmltopdf.org /tmp/test.pdf
+    client/python/kwkhtmltopdf_client.py https://wkhtmltopdf.org /tmp/test.pdf
 ```
 
 This should generate a printout of the wkhtmltopdf home page to /tmp/test.pdf.
