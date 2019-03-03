@@ -1,0 +1,34 @@
+language: python
+
+python: 3.6
+
+dist: xenial
+
+cache: pip
+
+before_install:
+  - pip install tox-travis
+
+install:
+  # install wkhtmltopdf
+  - wget -q -O wkhtmltox.deb https://downloads.wkhtmltopdf.org/0.12/0.12.5/wkhtmltox_0.12.5-1.xenial_amd64.deb
+  - dpkg --extract wkhtmltox.deb wkhtmltox.deb_files
+  - export KWKHTMLTOPDF_BIN=$PWD/wkhtmltox.deb_files/usr/local/bin/wkhtmltopdf
+  - $KWKHTMLTOPDF_BIN --version
+  # start server
+  - pip3 install -r server/requirements.txt.in
+  - python3 server/kwkhtmltopdf_server.py &> kwkhtmltopdf_server.log &
+  - KWKHTMLTOPDF_SERVER_PID=$!
+  - export KWKHTMLTOPDF_SERVER_URL=http://localhost:8080
+  # overwrite default imagemagick policy that prevents reading PDF
+  - sudo cp tests/travis-imagemagick-policy.xml /etc/ImageMagick-6/policy.xml
+  - sudo apt-get -y install -f ghostscript
+
+script:
+  - tox
+  - tox -e pre-commit
+
+after_script:
+  - kill -TERM $KWKHTMLTOPDF_SERVER_PID
+  - sleep 1
+  - cat kwkhtmltopdf_server.log
