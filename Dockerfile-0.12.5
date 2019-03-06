@@ -1,5 +1,7 @@
 FROM ubuntu:18.04
 
+ENV PYTHONUNBUFFERED=1
+
 RUN set -x \
   && apt update \
   && apt -y install --no-install-recommends wget ca-certificates \
