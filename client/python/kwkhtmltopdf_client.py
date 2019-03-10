@@ -40,7 +40,7 @@ def wkhtmltopdf(args):
         raise UsageError("stdin/stdout input is not implemented")
 
     output = "-"
-    if args and not args[-1].startswith("-"):
+    if len(args) >= 2 and not args[-1].startswith("-") and not args[-2].startswith("-"):
         output = args[-1]
         args = args[:-1]
 
