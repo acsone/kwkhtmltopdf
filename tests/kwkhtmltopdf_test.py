@@ -50,12 +50,19 @@ class Client:
 
 
 @pytest.fixture(
-    params=["native", "client", "client_sys_py2", "client_sys_py3"], scope="module"
+    params=[
+        "native",
+        "client_test_py",
+        "client_sys_py2",
+        "client_sys_py3",
+        "client_go",
+    ],
+    scope="module",
 )
 def client(request):
     if request.param == "native":
         yield Client([_wkhtmltopdf_bin()])
-    elif request.param == "client":
+    elif request.param == "client_test_py":
         # run the client with same python as test suite
         yield Client(
             [os.path.join(HERE, "..", "client", "python", "kwkhtmltopdf_client.py")]
@@ -76,6 +83,8 @@ def client(request):
                 os.path.join(HERE, "..", "client", "python", "kwkhtmltopdf_client.py"),
             ]
         )
+    elif request.param == "client_go":
+        yield Client([os.path.join(HERE, "..", "client", "go", "kwkhtmltopdf_client")])
 
 
 def test_noargs(client):

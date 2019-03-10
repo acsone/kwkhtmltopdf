@@ -10,8 +10,11 @@ It requires python 3.6 or greater.
 A drop-in replacement for [wkhtmlpdf](https://wkhtmltopdf.org) which invokes
 the above server defined in the `KWKHTMLTOPDF_SERVER_URL` environment variable.
 
-It's only dependency is the `requests` library.
-It should work with any python version supported by `requests`.
+There are two clients:
+
+* a go client (preferred)
+* a python client, which only depends on the `requests` library.
+  It should work with any python version supported by `requests`.
 
 # Quick start
 
@@ -42,9 +45,7 @@ This should generate a printout of the wkhtmltopdf home page to /tmp/test.pdf.
 
 - A few more tests.
 - See also some TODO in source code (most important one is probably
-  detection of file arguments in the client).
-- Write an alternative client (in go?) that is easier to deploy
-  and starts faster than the python one.
+  detection of file arguments in the clients).
 
 # WARNING
 
