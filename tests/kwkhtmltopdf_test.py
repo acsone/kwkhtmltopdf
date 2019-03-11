@@ -84,7 +84,13 @@ def client(request):
             ]
         )
     elif request.param == "client_go":
-        yield Client([os.path.join(HERE, "..", "client", "go", "kwkhtmltopdf_client")])
+        yield Client(
+            [
+                "go",
+                "run",
+                os.path.join(HERE, "..", "client", "go", "kwkhtmltopdf_client.go"),
+            ]
+        )
 
 
 def test_noargs(client):
