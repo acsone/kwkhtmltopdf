@@ -2,13 +2,15 @@ package main
 
 import (
 	"bytes"
+	"errors"
 	"io"
-	"log"
 	"mime/multipart"
 	"net/http"
 	"os"
 	"strings"
 )
+
+const chunkSize = 32 * 1024
 
 func addOption(w *multipart.Writer, option string) error {
 	return w.WriteField("option", option)
@@ -24,19 +26,20 @@ func addFile(w *multipart.Writer, filename string) error {
 		return err
 	}
 	defer file.Close()
-	io.Copy(writer, file)
+	_, err = io.Copy(writer, file)
 	return err
 }
 
-func main() {
+func do() error {
 	var err error
 	var out *os.File
 
 	serverURL := os.Getenv("KWKHTMLTOPDF_SERVER_URL")
 	if serverURL == "" {
-		log.Fatal("KWKHTMLTOPDF_SERVER_URL not set")
+		return errors.New("KWKHTMLTOPDF_SERVER_URL not set")
 	}
 
+	// detect if last argument is output file, and create it
 	args := os.Args[1:]
 	if len(args) == 0 {
 		args = []string{"-h"}
@@ -44,7 +47,7 @@ func main() {
 	if len(args) >= 2 && !strings.HasPrefix(args[len(args)-1], "-") && !strings.HasPrefix(args[len(args)-2], "-") {
 		out, err = os.Create(args[len(args)-1])
 		if err != nil {
-			log.Fatal(err)
+			return err
 		}
 		defer out.Close()
 		args = args[:len(args)-1]
@@ -52,11 +55,12 @@ func main() {
 		out = os.Stdout
 	}
 
-	var buf bytes.Buffer
-	w := multipart.NewWriter(&buf)
+	// prepare request
+	var postBuf bytes.Buffer
+	w := multipart.NewWriter(&postBuf)
 	for _, arg := range args {
 		if arg == "-" {
-			log.Fatal("stdin/stdout input is not implemented")
+			return errors.New("stdin/stdout input is not implemented")
 		} else if strings.HasPrefix(arg, "-") {
 			err = addOption(w, arg)
 		} else if strings.HasPrefix(arg, "https://") {
@@ -72,24 +76,46 @@ func main() {
 			err = addOption(w, arg)
 		}
 		if err != nil {
-			log.Fatal(err)
+			return err
 		}
 	}
 	w.Close()
 
-	resp, err := http.Post(serverURL, w.FormDataContentType(), &buf)
+	// post request
+	resp, err := http.Post(serverURL, w.FormDataContentType(), &postBuf)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
-		log.Fatal("server error, consult server log for details")
+		return errors.New("server error, consult server log for details")
 	}
 
-	// TODO detection of chunked encoding read errors,
-	// TODO which indicate server error
-	_, err = io.Copy(out, resp.Body)
+	respBuf := make([]byte, chunkSize)
+	for {
+		nr, er := resp.Body.Read(respBuf)
+		if er != nil && er != io.EOF {
+			return errors.New("server error, consult server log for details")
+		}
+		if nr > 0 {
+			_, ew := out.Write(respBuf[0:nr])
+			if ew != nil {
+				return ew
+			}
+		}
+		if er == io.EOF {
+			break
+		}
+	}
+
+	return nil
+}
+
+func main() {
+	err := do()
 	if err != nil {
-		log.Fatal(err)
+		os.Stderr.WriteString(err.Error())
+		os.Stderr.WriteString("\n")
+		os.Exit(1)
 	}
 }
