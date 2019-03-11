@@ -91,6 +91,7 @@ func do() error {
 		return errors.New("server error, consult server log for details")
 	}
 
+	// read response
 	respBuf := make([]byte, chunkSize)
 	for {
 		nr, er := resp.Body.Read(respBuf)

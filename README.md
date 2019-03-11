@@ -29,6 +29,14 @@ The server should now listen on http://localhost:8080.
 ## Run the client
 
 ```
+$ go build -o client/go/kwkhtmltopdf_client client/go/kwkhtmltopdf_client.go
+$ env KWKHTMLTOPDF_SERVER_URL=http://localhost:8080 \
+    client/go/kwkhtmltopdf_client https://wkhtmltopdf.org /tmp/test.pdf
+```
+
+or
+
+```
 $ env KWKHTMLTOPDF_SERVER_URL=http://localhost:8080 \
     client/python/kwkhtmltopdf_client.py https://wkhtmltopdf.org /tmp/test.pdf
 ```
@@ -41,11 +49,10 @@ This should generate a printout of the wkhtmltopdf home page to /tmp/test.pdf.
 2. Set and export `KWKHTMLTOPDF_SERVER_URL` environment variable.
 3. Run `tox`.
 
-# TODO
+# Roadmap
 
-- A few more tests.
-- See also some TODO in source code (most important one is probably
-  detection of file arguments in the clients).
+See [issues on GitHub](<https://github.com/acsone/kwkhtmltopdf/issues>)
+as well as some TODO's in the source code.
 
 # WARNING
 
