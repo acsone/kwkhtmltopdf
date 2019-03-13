@@ -5,8 +5,8 @@ ENV PYTHONUNBUFFERED=1
 RUN set -x \
   && apt update \
   && apt -y install --no-install-recommends wget ca-certificates \
-  && wget -q -O /tmp/wkhtmltox.deb https://downloads.wkhtmltopdf.org/0.12/0.12.5/wkhtmltox_0.12.5-1.bionic_amd64.deb \
-  && echo "f1689a1b302ff102160f2693129f789410a1708a /tmp/wkhtmltox.deb" | sha1sum -c - \
+  && wget -q -O /tmp/wkhtmltox.deb https://builds.wkhtmltopdf.org/0.12.1.3/wkhtmltox_0.12.1.3-1~bionic_amd64.deb \
+  && echo "da820f2455da0e271cda6a724c9cf24ebdc96af3  /tmp/wkhtmltox.deb" | sha1sum -c - \
   && apt -y install --no-install-recommends /tmp/wkhtmltox.deb \
   && apt -y install --no-install-recommends python3-pip python3-setuptools \
   && apt -y clean \
