@@ -20,6 +20,8 @@ COPY server/kwkhtmltopdf_server.py /usr/local/bin/
 
 RUN adduser --disabled-password --gecos '' kwkhtmltopdf
 USER kwkhtmltopdf
+ENV LANG C.UTF-8
+ENV LC_ALL C.UTF-8
 
 EXPOSE 8080
 CMD /usr/local/bin/kwkhtmltopdf_server.py

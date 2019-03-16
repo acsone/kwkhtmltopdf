@@ -143,11 +143,17 @@ def test_not_found(client, tmp_path):
     client._run_expect_error(["https://github.com/acsone/notfound", tmp_path / "o.pdf"])
 
 
-def test_image_not_found(client, tmp_path):
+def test_2_image_not_found(client, tmp_path):
     client._run_expect_file(
         ["--load-media-error-handling", "ignore", "test2.html", tmp_path / "o.pdf"],
         "test2",
     )
     client._run_expect_error(
         ["--load-media-error-handling", "abort", "test2.html", tmp_path / "o.pdf"]
+    )
+
+
+def test_3_accent_arg(client, tmp_path):
+    client._run_expect_file(
+        ["--header-left", "Héllo", "test1.html", tmp_path / "o.pdf"], "test3"
     )
