@@ -1,3 +1,6 @@
+// Copyright (c) 2019 ACSONE SA/NV
+// Distributed under the MIT License (http://opensource.org/licenses/MIT)
+
 package main
 
 import (
