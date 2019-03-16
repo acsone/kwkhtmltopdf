@@ -3,7 +3,7 @@
 A web server accepting [wkhtmlpdf](https://wkhtmltopdf.org) options and files
 to convert as multipart form data.
 
-It requires python 3.6 or greater.
+It is written in go.
 
 # kwkhtmltopdf_client
 
@@ -22,6 +22,12 @@ There are two clients:
 
 ```
 $ docker run -it --rm -p 8080:8080 acsone/kwhkhtmltopdf
+```
+
+or
+
+```
+$ go run server/kwkhtmltopdf_server.go
 ```
 
 The server should now listen on http://localhost:8080.
