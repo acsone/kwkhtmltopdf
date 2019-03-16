@@ -62,6 +62,16 @@ Several attack vectors exist (local file access being the most obvious).
 Mitigating them is not a priority, since the main use case is
 to use it as a private service.
 
+# Releasing
+
+Push the master branch and ensure tests pass on travis.
+
+Create and push a git tag.
+
+Travis will build and deploy the client as a GitHub release.
+
+Docker Hub will build the images.
+
 # Credits
 
 Author: stephane.bidoul@acsone.eu.

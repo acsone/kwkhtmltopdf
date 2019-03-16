@@ -7,11 +7,12 @@ dist: xenial
 services:
   - docker
 
-env:
-  - WKHTMLTOPDF_VERSION=0.12.1.3
-  - WKHTMLTOPDF_VERSION=0.12.5
+stages:
+  - name: test
+  - name: deploy
+    if: tag IS present
 
-before_install:
+install:
   - pip install tox-travis
   # overwrite default imagemagick policy that prevents reading PDF
   - sudo cp tests/travis-imagemagick-policy.xml /etc/ImageMagick-6/policy.xml
@@ -19,8 +20,7 @@ before_install:
   # install wkhtmltopdf for native test
   - wget -q -O /tmp/wkhtmltox.deb https://downloads.wkhtmltopdf.org/0.12/0.12.5/wkhtmltox_0.12.5-1.xenial_amd64.deb
   - sudo apt -y install -f /tmp/wkhtmltox.deb
-
-install:
+  # build and start server image
   - docker build -f Dockerfile-${WKHTMLTOPDF_VERSION} -t kwkhtmltopdf:${WKHTMLTOPDF_VERSION} .
   - docker run -d --name kwkhtmltopdf -p 8080:8080 kwkhtmltopdf:${WKHTMLTOPDF_VERSION}
   - export KWKHTMLTOPDF_SERVER_URL=http://localhost:8080
@@ -31,3 +31,29 @@ script:
 after_script:
   - docker logs kwkhtmltopdf
   - docker stop kwkhtmltopdf
+
+jobs:
+  include:
+    - stage: test
+      env:
+        - WKHTMLTOPDF_VERSION=0.12.1.3
+    - stage: test
+      env:
+        - WKHTMLTOPDF_VERSION=0.12.5
+    - stage: deploy
+      install:
+        - go build client/go/kwkhtmltopdf_client.go
+        - sha1sum kwkhtmltopdf_client > SHA1SUMS
+      script: skip
+      after_script: skip
+      deploy:
+        provider: releases
+        api_key:
+          secure: H8OMvqw40jEffhfNTKtNM2eI6X6Jv/FiXdMotImCIPScSjTw6s7oRIiE3zBdJLg6o+5MTkZI6ihLXVZaEstFC99fx7VRVTb/n6JMS96kDqqdqjmAuHtG2ovN6gR65l1TPbeAinOrk4B5kPBLqOjQGLnrVF6pE12dScExCVF9ckXUTnwkDhpReTK2e0m0KEQBLcGeGEFYSIEkMFqWfl3WealLBnSgYFpU0bphYy44uNVWdHtqKpF9hMRuPq3FM+H7eKZhNF34Q+XzULZd7WfU8DeQ0ZtVTlCK3djqLI2kMm/QULjLGAQVRiG8F0xlQ5T7iIaS+VK5WTg8v6zXEFVEbxkWv5oCJuS8tUy3iCyQ9lhgY173fyOhnwGBYzQFP2M82T9o2UiSu5JzxMWHYKResHO3c1nLQ27eP5hnSQxJe0DHvBBKD5H3/lpxfET0/JszXvNMezWmOA7QaQBFQdDwGPftQm4AZlv5eh7Wgr5SZFbhqc+UGGg4rl5WXOBJ+/XruKUSMVFh3wJNitXEvtEKSqb8MjiPqJi5ApKsrIt6CuLnhLWFXIDDMGj3oznRvKyLA2SPWk3Xcpny6zt2uZ6XpeiJqOQhiete5udEjfPZ27rGHra8JEj4ARCUJXEDo1iAJPFbJXLxjCw08BFAik19mUiK3VhUZZ5j36wtQaggzB4=
+        skip_cleanup: true
+        file:
+          - kwkhtmltopdf_client
+          - SHA1SUMS
+        on:
+          repo: acsone/kwkhtmltopdf
+          tags: true
