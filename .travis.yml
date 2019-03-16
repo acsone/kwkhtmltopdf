@@ -4,31 +4,30 @@ python: 3.6
 
 dist: xenial
 
-cache: pip
+services:
+  - docker
+
+env:
+  - WKHTMLTOPDF_VERSION=0.12.1.3
+  - WKHTMLTOPDF_VERSION=0.12.5
 
 before_install:
   - pip install tox-travis
-
-install:
-  # install wkhtmltopdf
-  - wget -q -O wkhtmltox.deb https://downloads.wkhtmltopdf.org/0.12/0.12.5/wkhtmltox_0.12.5-1.xenial_amd64.deb
-  - dpkg --extract wkhtmltox.deb wkhtmltox.deb_files
-  - export KWKHTMLTOPDF_BIN=$PWD/wkhtmltox.deb_files/usr/local/bin/wkhtmltopdf
-  - $KWKHTMLTOPDF_BIN --version
-  # start server
-  - pip3 install -r server/requirements.txt.in
-  - python3 server/kwkhtmltopdf_server.py &> kwkhtmltopdf_server.log &
-  - KWKHTMLTOPDF_SERVER_PID=$!
-  - export KWKHTMLTOPDF_SERVER_URL=http://localhost:8080
   # overwrite default imagemagick policy that prevents reading PDF
   - sudo cp tests/travis-imagemagick-policy.xml /etc/ImageMagick-6/policy.xml
   - sudo apt-get -y install -f ghostscript
+  # install wkhtmltopdf for native test
+  - wget -q -O /tmp/wkhtmltox.deb https://downloads.wkhtmltopdf.org/0.12/0.12.5/wkhtmltox_0.12.5-1.xenial_amd64.deb
+  - sudo apt -y install -f /tmp/wkhtmltox.deb
+
+install:
+  - docker build -f Dockerfile-${WKHTMLTOPDF_VERSION} -t kwkhtmltopdf:${WKHTMLTOPDF_VERSION} .
+  - docker run -d --name kwkhtmltopdf -p 8080:8080 kwkhtmltopdf:${WKHTMLTOPDF_VERSION}
+  - export KWKHTMLTOPDF_SERVER_URL=http://localhost:8080
 
 script:
   - tox
-  - tox -e pre-commit
 
 after_script:
-  - kill -TERM $KWKHTMLTOPDF_SERVER_PID
-  - sleep 1
-  - cat kwkhtmltopdf_server.log
+  - docker logs kwkhtmltopdf
+  - docker stop kwkhtmltopdf

@@ -7,8 +7,9 @@ RUN set -x \
   && apt -y install --no-install-recommends wget ca-certificates \
   && wget -q -O /tmp/wkhtmltox.deb https://downloads.wkhtmltopdf.org/0.12/0.12.5/wkhtmltox_0.12.5-1.bionic_amd64.deb \
   && echo "f1689a1b302ff102160f2693129f789410a1708a /tmp/wkhtmltox.deb" | sha1sum -c - \
-  && apt -y install --no-install-recommends /tmp/wkhtmltox.deb \
+  && apt -y install /tmp/wkhtmltox.deb \
   && apt -y install --no-install-recommends python3-pip python3-setuptools \
+  && apt -y purge wget --autoremove \
   && apt -y clean \
   && rm -rf /var/lib/apt/lists/*
 
