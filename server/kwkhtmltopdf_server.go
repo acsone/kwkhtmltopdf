@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"errors"
 	"io"
 	"io/ioutil"
 	"log"
@@ -46,7 +47,13 @@ func isDocOption(arg string) bool {
 	return false
 }
 
-func abortResponse(w http.ResponseWriter) {
+func httpError(w http.ResponseWriter, err error, code int) {
+	log.Println(err)
+	http.Error(w, err.Error(), code)
+}
+
+func httpAbort(w http.ResponseWriter, err error) {
+	log.Println(err)
 	// abort chunked encoding response as crude way to report error to client
 	wh, ok := w.(http.Hijacker)
 	if !ok {
@@ -62,20 +69,21 @@ func abortResponse(w http.ResponseWriter) {
 }
 
 func handler(w http.ResponseWriter, r *http.Request) {
+	log.Printf("%s %s", r.Method, r.URL.Path)
 	if r.Method != http.MethodPost {
-		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		httpError(w, errors.New("http method not allowed: "+r.Method), http.StatusMethodNotAllowed)
 		return
 	}
 	if r.URL.Path != "/" && r.URL.Path != "/pdf" {
 		// handle / and /pdf, keep the rest for future use
-		http.Error(w, "path not found", http.StatusNotFound)
+		httpError(w, errors.New("path not found: "+r.URL.Path), http.StatusNotFound)
 		return
 	}
 
 	// temp dir for files
 	tmpdir, err := ioutil.TempDir("", "kwk")
 	if err != nil {
-		http.Error(w, "path not found", http.StatusNotFound)
+		httpError(w, err, http.StatusNotFound)
 		return
 	}
 	defer os.RemoveAll(tmpdir)
@@ -83,7 +91,7 @@ func handler(w http.ResponseWriter, r *http.Request) {
 	// parse request
 	reader, err := r.MultipartReader()
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		httpError(w, err, http.StatusBadRequest)
 		return
 	}
 	var docOutput bool
@@ -94,7 +102,7 @@ func handler(w http.ResponseWriter, r *http.Request) {
 			break
 		}
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
+			httpError(w, err, http.StatusBadRequest)
 			return
 		}
 		if part.FormName() == "option" {
@@ -113,18 +121,18 @@ func handler(w http.ResponseWriter, r *http.Request) {
 			// TODO what if multiple files with same basename?
 			file, err := os.Create(path)
 			if err != nil {
-				http.Error(w, err.Error(), http.StatusBadRequest)
+				httpError(w, err, http.StatusBadRequest)
 				return
 			}
 			_, err = io.Copy(file, part)
 			file.Close()
 			if err != nil {
-				http.Error(w, err.Error(), http.StatusBadRequest)
+				httpError(w, err, http.StatusBadRequest)
 				return
 			}
 			args = append(args, path)
 		} else {
-			http.Error(w, "unpexpected part name", http.StatusBadRequest)
+			httpError(w, errors.New("unpexpected part name: "+part.FormName()), http.StatusBadRequest)
 			return
 		}
 	}
@@ -136,31 +144,33 @@ func handler(w http.ResponseWriter, r *http.Request) {
 		args = append(args, "-")
 	}
 
-	log.Println(args) // TODO better logging, hide sensitve options
+	log.Println(args, "starting") // TODO better logging, hide sensitve options
 
 	cmd := exec.Command(wkhtmltopdfBin(), args...)
 	cmdStdout, err := cmd.StdoutPipe()
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		httpError(w, err, http.StatusInternalServerError)
 		return
 	}
 	cmd.Stderr = os.Stderr
 	err = cmd.Start()
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		httpError(w, err, http.StatusInternalServerError)
 		return
 	}
 	w.WriteHeader(http.StatusOK)
 	_, err = io.Copy(w, cmdStdout)
 	if err != nil {
-		abortResponse(w)
+		httpAbort(w, err)
 		return
 	}
 	err = cmd.Wait()
 	if err != nil {
-		abortResponse(w)
+		httpAbort(w, err)
 		return
 	}
+
+	log.Println(args, "success")
 }
 
 func main() {
