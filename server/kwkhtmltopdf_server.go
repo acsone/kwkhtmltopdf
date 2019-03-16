@@ -11,7 +11,14 @@ import (
 	"path/filepath"
 )
 
-const returnCodeHeader = "kwkhtmltopdf-returncode"
+// TODO ignore opts?
+// --log-level, -q, --quiet, --read-args-from-stdin, --dump-default-toc-xsl
+// --dump-outline <file>, --allow <path>, --cache-dir <path>,
+// --disable-local-file-access, --enable-local-file-access
+
+// TODO sensitive opts to be hidden from log
+// --cookie <name> <value>, --password <password>,
+// --ssl-key-password <password>
 
 func wkhtmltopdfBin() string {
 	bin := os.Getenv("KWKHTMLTOPDF_BIN")
@@ -19,6 +26,24 @@ func wkhtmltopdfBin() string {
 		return bin
 	}
 	return "wkhtmltopdf"
+}
+
+func isDocOption(arg string) bool {
+	switch arg {
+	case
+		"-h",
+		"--help",
+		"-H",
+		"--extended-help",
+		"-V",
+		"--version",
+		"--readme",
+		"--license",
+		"--htmldoc",
+		"--manpage":
+		return true
+	}
+	return false
 }
 
 func abortResponse(w http.ResponseWriter) {
@@ -61,6 +86,7 @@ func handler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
+	var docOutput bool
 	var args []string
 	for {
 		part, err := reader.NextPart()
@@ -74,7 +100,11 @@ func handler(w http.ResponseWriter, r *http.Request) {
 		if part.FormName() == "option" {
 			buf := new(bytes.Buffer)
 			buf.ReadFrom(part)
-			args = append(args, buf.String())
+			arg := buf.String()
+			args = append(args, arg)
+			if isDocOption(arg) {
+				docOutput = true
+			}
 		} else if part.FormName() == "file" {
 			// It's important to preserve as much as possible of the
 			// original filename because some javascript can depend on it
@@ -99,12 +129,17 @@ func handler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	args = append(args, "-")
+	if docOutput {
+		w.Header().Add("Content-Type", "text/plain")
+	} else {
+		w.Header().Add("Content-Type", "application/pdf")
+		args = append(args, "-")
+	}
 
 	log.Println(args) // TODO better logging, hide sensitve options
 
 	cmd := exec.Command(wkhtmltopdfBin(), args...)
-	out, err := cmd.StdoutPipe()
+	cmdStdout, err := cmd.StdoutPipe()
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -116,7 +151,7 @@ func handler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.WriteHeader(http.StatusOK)
-	_, err = io.Copy(w, out)
+	_, err = io.Copy(w, cmdStdout)
 	if err != nil {
 		abortResponse(w)
 		return
