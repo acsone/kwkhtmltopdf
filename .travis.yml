@@ -43,7 +43,8 @@ jobs:
     - stage: deploy
       install:
         - go build client/go/kwkhtmltopdf_client.go
-        - sha1sum kwkhtmltopdf_client > SHA1SUMS
+        - go build server/kwkhtmltopdf_server.go
+        - sha1sum kwkhtmltopdf_client kwkhtmltopdf_server > SHA1SUMS
       script: skip
       after_script: skip
       deploy:
@@ -53,6 +54,7 @@ jobs:
         skip_cleanup: true
         file:
           - kwkhtmltopdf_client
+          - kwkhtmltopdf_server
           - SHA1SUMS
         on:
           repo: acsone/kwkhtmltopdf

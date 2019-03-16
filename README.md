@@ -74,9 +74,9 @@ Push the master branch and ensure tests pass on travis.
 
 Create and push a git tag.
 
-Travis will build and deploy the client as a GitHub release.
+Travis will create a GitHub release with the client and server binaries.
 
-Docker Hub will build the images.
+[Docker Hub](https://cloud.docker.com/u/acsone/repository/docker/acsone/kwkhtmltopdf) will build the images.
 
 # Credits
 
