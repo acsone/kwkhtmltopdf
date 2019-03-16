@@ -23,6 +23,14 @@ def _wkhtmltopdf_bin():
 class Client:
     def __init__(self, cmd):
         self.cmd = cmd
+        self.version = self._get_version()
+
+    def _get_version(self):
+        out = subprocess.check_output(self.cmd + ["--version"], universal_newlines=True)
+        mo = re.match(r"wkhtmltopdf ([0-9][0-9\.]+) ", out)
+        if not mo:
+            raise RuntimeError("could not find version in {}".format(out))
+        return mo.group(1)
 
     def _run_stdout(self, args, check_return_code=True):
         proc = subprocess.Popen(
@@ -40,10 +48,17 @@ class Client:
         r = subprocess.call(self.cmd + args)
         assert r != 0
 
-    def _run_expect_file(self, args, expected_data_file):
+    def _run_expect_file(self, args, expected_pdf_base_name):
         r = subprocess.call(self.cmd + args, cwd=os.path.join(HERE, "data"))
         assert r == 0
-        expected = Image(filename=os.path.join(HERE, "data", expected_data_file))
+        expected_path = os.path.join(
+            HERE, "data", expected_pdf_base_name + "-" + self.version + ".pdf"
+        )
+        if not os.path.exists(expected_path):
+            raise RuntimeError(
+                "Expected output file {} not found".format(expected_path)
+            )
+        expected = Image(filename=expected_path)
         actual = Image(filename=str(args[-1]))
         diff = actual.compare(expected, metric="root_mean_square")
         assert diff[1] < 0.01
@@ -117,7 +132,7 @@ def test_version(client):
 
 
 def test_1(client, tmp_path):
-    client._run_expect_file(["test1.html", tmp_path / "o.pdf"], "test1.pdf")
+    client._run_expect_file(["test1.html", tmp_path / "o.pdf"], "test1")
 
 
 def test_bad_option(client):
@@ -131,7 +146,7 @@ def test_not_found(client, tmp_path):
 def test_image_not_found(client, tmp_path):
     client._run_expect_file(
         ["--load-media-error-handling", "ignore", "test2.html", tmp_path / "o.pdf"],
-        "test2.pdf",
+        "test2",
     )
     client._run_expect_error(
         ["--load-media-error-handling", "abort", "test2.html", tmp_path / "o.pdf"]
