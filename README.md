@@ -66,6 +66,10 @@ to use it as a private service.
 
 Author: stephane.bidoul@acsone.eu.
 
+Contributors:
+
+* Nils Hamerlinck
+
 # License
 
 MIT
