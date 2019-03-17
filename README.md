@@ -21,7 +21,7 @@ There are two clients:
 ## Run the server
 
 ```
-$ docker run -it --rm -p 8080:8080 acsone/kwhkhtmltopdf
+$ docker run --rm -p 8080:8080 acsone/kwhkhtmltopdf
 ```
 
 or
@@ -54,6 +54,9 @@ This should generate a printout of the wkhtmltopdf home page to /tmp/test.pdf.
 1. Start the server.
 2. Set and export `KWKHTMLTOPDF_SERVER_URL` environment variable.
 3. Run `tox`.
+
+This will run the same tests against the the native wkhtmltopdf executable,
+as well as against the server using the python and go clients.
 
 # Roadmap
 
