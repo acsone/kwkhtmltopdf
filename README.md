@@ -1,3 +1,20 @@
+A [wkhtmlpdf](https://wkhtmltopdf.org) server with drop-in client.
+
+Why?
+
+- avoid deploying wkhtmltopdf and it's dependencies in your application image
+- keep the memory requirement of your application pods low while delegating
+  memory hungry wkhtmltopdf jobs to dedicated pods
+- easily select the wkhtmltopdf version to use at runtime
+
+# WARNING
+
+The server is not meant to be exposed to untrusted clients.
+
+Several attack vectors exist (local file access being the most obvious).
+Mitigating them is not a priority, since the main use case is
+to use it as a private service.
+
 # kwkhtmltopdf_server
 
 A web server accepting [wkhtmlpdf](https://wkhtmltopdf.org) options and files
@@ -62,14 +79,6 @@ as well as against the server using the python and go clients.
 
 See [issues on GitHub](<https://github.com/acsone/kwkhtmltopdf/issues>)
 as well as some TODO's in the source code.
-
-# WARNING
-
-The server is not meant to be exposed to untrusted clients.
-
-Several attack vectors exist (local file access being the most obvious).
-Mitigating them is not a priority, since the main use case is
-to use it as a private service.
 
 # Releasing
 
