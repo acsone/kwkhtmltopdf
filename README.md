@@ -3,7 +3,7 @@
 A web server accepting [wkhtmlpdf](https://wkhtmltopdf.org) options and files
 to convert as multipart form data.
 
-It requires python 3.6 or greater.
+It is written in go.
 
 # kwkhtmltopdf_client
 
@@ -21,7 +21,13 @@ There are two clients:
 ## Run the server
 
 ```
-$ docker run -it --rm -p 8080:8080 acsone/kwhkhtmltopdf
+$ docker run --rm -p 8080:8080 acsone/kwhkhtmltopdf
+```
+
+or
+
+```
+$ go run server/kwkhtmltopdf_server.go
 ```
 
 The server should now listen on http://localhost:8080.
@@ -49,6 +55,9 @@ This should generate a printout of the wkhtmltopdf home page to /tmp/test.pdf.
 2. Set and export `KWKHTMLTOPDF_SERVER_URL` environment variable.
 3. Run `tox`.
 
+This will run the same tests against the the native wkhtmltopdf executable,
+as well as against the server using the python and go clients.
+
 # Roadmap
 
 See [issues on GitHub](<https://github.com/acsone/kwkhtmltopdf/issues>)
@@ -68,9 +77,9 @@ Push the master branch and ensure tests pass on travis.
 
 Create and push a git tag.
 
-Travis will build and deploy the client as a GitHub release.
+Travis will create a GitHub release with the client and server binaries.
 
-Docker Hub will build the images.
+[Docker Hub](https://cloud.docker.com/u/acsone/repository/docker/acsone/kwkhtmltopdf) will build the images.
 
 # Credits
 
