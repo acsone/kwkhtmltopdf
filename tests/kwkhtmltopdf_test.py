@@ -21,8 +21,9 @@ def _wkhtmltopdf_bin():
 
 
 class Client:
-    def __init__(self, cmd):
+    def __init__(self, cmd, env):
         self.cmd = cmd
+        self.env = env
         self.version = self._get_version()
 
     def _get_version(self):
@@ -32,12 +33,15 @@ class Client:
             raise RuntimeError("could not find version in {}".format(out))
         return mo.group(1)
 
-    def _run_stdout(self, args, check_return_code=True):
+    def _run_stdout(self, args, check_return_code=True, env_update={}):
+        env = os.environ.copy()
+        env.update(env_update)
         proc = subprocess.Popen(
             self.cmd + args,
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
             universal_newlines=True,
+            env=env,
         )
         out, _ = proc.communicate()
         if check_return_code:
@@ -76,11 +80,13 @@ class Client:
 )
 def client(request):
     if request.param == "native":
-        yield Client([_wkhtmltopdf_bin()])
+        yield Client([_wkhtmltopdf_bin()],
+                     request.param)
     elif request.param == "client_test_py":
         # run the client with same python as test suite
         yield Client(
-            [os.path.join(HERE, "..", "client", "python", "kwkhtmltopdf_client.py")]
+            [os.path.join(HERE, "..", "client", "python", "kwkhtmltopdf_client.py")],
+            request.param
         )
     elif request.param == "client_sys_py2":
         # run the client with the system python2
@@ -88,7 +94,8 @@ def client(request):
             [
                 "/usr/bin/python2",
                 os.path.join(HERE, "..", "client", "python", "kwkhtmltopdf_client.py"),
-            ]
+            ],
+            request.param
         )
     elif request.param == "client_sys_py3":
         # run the client with the system python2
@@ -96,7 +103,8 @@ def client(request):
             [
                 "/usr/bin/python3",
                 os.path.join(HERE, "..", "client", "python", "kwkhtmltopdf_client.py"),
-            ]
+            ],
+            request.param
         )
     elif request.param == "client_go":
         yield Client(
@@ -104,8 +112,19 @@ def client(request):
                 "go",
                 "run",
                 os.path.join(HERE, "..", "client", "go", "kwkhtmltopdf_client.go"),
-            ]
+            ],
+            request.param
         )
+
+
+def test_server_url_not_set(client):
+    if client.env == "native":
+        pytest.skip("not relevant for native wkhtmltopdf")
+
+    out = client._run_stdout([],
+                             check_return_code=False,
+                             env_update={'KWKHTMLTOPDF_SERVER_URL': ''})
+    assert re.search(r"KWKHTMLTOPDF_SERVER_URL not set", out)
 
 
 def test_noargs(client):
@@ -129,6 +148,15 @@ def test_extended_help(client):
 def test_version(client):
     out = client._run_stdout(["--version"])
     assert re.search(r"wkhtmltopdf [\d\.]+ ", out)
+
+
+def test_version_mock(client):
+    if client.env == "native":
+        pytest.skip("not relevant for native wkhtmltopdf")
+
+    out = client._run_stdout(["--version"],
+                             env_update={'KWKHTMLTOPDF_SERVER_URL': 'MOCK'})
+    assert re.search(r"wkhtmltopdf [\d\.]+ \(mock\)", out)
 
 
 def test_1(client, tmp_path):
