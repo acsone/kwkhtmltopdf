@@ -11,7 +11,7 @@ FROM ubuntu:18.04
 
 RUN set -x \
   && apt update \
-  && apt -y install --no-install-recommends wget ca-certificates gsfonts xfonts-75dpi xfonts-100dpi \
+  && apt -y install --no-install-recommends wget ca-certificates fonts-liberation2 \
   && wget -q -O /tmp/wkhtmltox.deb https://builds.wkhtmltopdf.org/0.12.1.3/wkhtmltox_0.12.1.3-1~bionic_amd64.deb \
   && echo "da820f2455da0e271cda6a724c9cf24ebdc96af3  /tmp/wkhtmltox.deb" | sha1sum -c - \
   && apt -y install /tmp/wkhtmltox.deb \
