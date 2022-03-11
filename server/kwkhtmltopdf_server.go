@@ -8,6 +8,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"net"
 	"os/exec"
 	"path/filepath"
 )
@@ -69,7 +70,23 @@ func httpAbort(w http.ResponseWriter, err error) {
 }
 
 func handler(w http.ResponseWriter, r *http.Request) {
-	log.Printf("%s %s", r.Method, r.URL.Path)
+	debug_enabled := os.Getenv("DEBUG")
+	if debug_enabled != "" {
+		log.Printf("%s %s", r.Method, r.URL.Path)
+	}
+
+	hostArg, _, err := net.SplitHostPort(r.RemoteAddr)
+	if err != nil {
+		httpError(w, err, http.StatusBadRequest)
+		return
+	}
+	addr, err := net.LookupAddr(hostArg)
+	if err != nil {
+		httpError(w, err, http.StatusBadRequest)
+		return
+	}
+	log.Printf("Request from : %s", addr)
+
 	if r.Method != http.MethodPost {
 		httpError(w, errors.New("http method not allowed: "+r.Method), http.StatusMethodNotAllowed)
 		return
@@ -143,34 +160,42 @@ func handler(w http.ResponseWriter, r *http.Request) {
 		w.Header().Add("Content-Type", "application/pdf")
 		args = append(args, "-")
 	}
-
-	log.Println(args, "starting") // TODO better logging, hide sensitve options
+	if debug_enabled != "" {
+		log.Println(args, "starting") // TODO better logging, hide sensitve options
+	}
+	
 
 	cmd := exec.Command(wkhtmltopdfBin(), args...)
 	cmdStdout, err := cmd.StdoutPipe()
 	if err != nil {
+		log.Printf("ERROR: On print request from hostname : %s", addr)
 		httpError(w, err, http.StatusInternalServerError)
 		return
 	}
 	cmd.Stderr = os.Stderr
 	err = cmd.Start()
 	if err != nil {
+		log.Printf("ERROR: On print request from hostname : %s", addr)
 		httpError(w, err, http.StatusInternalServerError)
 		return
 	}
 	w.WriteHeader(http.StatusOK)
 	_, err = io.Copy(w, cmdStdout)
 	if err != nil {
+		log.Printf("ERROR: On print request from hostname : %s", addr)
 		httpAbort(w, err)
 		return
 	}
 	err = cmd.Wait()
 	if err != nil {
+		log.Printf("ERROR: On print request from hostname : %s", addr)
 		httpAbort(w, err)
 		return
 	}
+	if debug_enabled != "" {
+		log.Println(args, "success")
+	}
 
-	log.Println(args, "success")
 }
 
 func main() {
