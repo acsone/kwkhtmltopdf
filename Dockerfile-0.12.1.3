@@ -1,13 +1,13 @@
 # first stage: build server
 
-FROM golang:1.11
+FROM docker.io/golang:1.11
 WORKDIR /tmp
 COPY server/kwkhtmltopdf_server.go .
 RUN go build kwkhtmltopdf_server.go
 
 # second stage: server with wkhtmltopdf
 
-FROM ubuntu:18.04
+FROM docker.io/ubuntu:18.04
 
 RUN set -x \
   && apt update \
