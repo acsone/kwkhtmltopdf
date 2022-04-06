@@ -17,7 +17,8 @@ RUN set -x \
   && apt -y install /tmp/wkhtmltox.deb \
   && apt -y purge wget --autoremove \
   && apt -y clean \
-  && rm -rf /var/lib/apt/lists/*
+  && rm -rf /var/lib/apt/lists/* \
+  && rm /tmp/wkhtmltox.deb
 
 COPY --from=0 /tmp/kwkhtmltopdf_server /usr/local/bin/
 
