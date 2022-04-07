@@ -18,7 +18,7 @@ install:
   - sudo cp tests/travis-imagemagick-policy.xml /etc/ImageMagick-6/policy.xml
   - sudo apt-get -y install -f ghostscript
   # install wkhtmltopdf for native test
-  - wget -q -O /tmp/wkhtmltox.deb https://downloads.wkhtmltopdf.org/0.12/0.12.5/wkhtmltox_0.12.5-1.xenial_amd64.deb
+  - wget -q -O /tmp/wkhtmltox.deb https://github.com/wkhtmltopdf/wkhtmltopdf/releases/download/0.12.5/wkhtmltox_0.12.5-1.xenial_amd64.deb
   - sudo apt -y install -f /tmp/wkhtmltox.deb
   # build and start server image
   - docker build -f Dockerfile-${WKHTMLTOPDF_VERSION} -t kwkhtmltopdf:${WKHTMLTOPDF_VERSION} .
