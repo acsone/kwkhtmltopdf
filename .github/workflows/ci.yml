@@ -30,7 +30,7 @@ jobs:
             ghcr.io/${{ github.repository }}:${{ matrix.tag }}-latest
           labels: |
             org.opencontainers.image.source=${{ github.event.repository.html_url }}
-          file: "{context}/Dockerfile-${{ matrix.tag }}"
+          file: Dockerfile-${{ matrix.tag }}
           cache-from: type=registry,ref=ghcr.io/${{ github.repository }}:${{ matrix.tag }}-latest
           cache-to: type=inline
           push: true
