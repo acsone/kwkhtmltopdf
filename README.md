@@ -40,7 +40,7 @@ There are two clients:
 ### Run the server
 
 ```
-$ docker run --rm -p 8080:8080 acsone/kwkhtmltopdf
+$ docker run --rm -p 8080:8080 ghcr.io/acsone/kwkhtmltopdf:0.12.5-latest
 ```
 
 or
@@ -90,7 +90,7 @@ Create and push a git tag.
 
 Travis will create a GitHub release with the client and server binaries.
 
-[Docker Hub](https://cloud.docker.com/u/acsone/repository/docker/acsone/kwkhtmltopdf) will build the images.
+Images are built and push to ghcr.io by a GitHub action.
 
 ## Credits
 
