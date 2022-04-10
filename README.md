@@ -86,11 +86,10 @@ as well as some TODO's in the source code.
 
 Push the master branch and ensure tests pass on travis.
 
-Create and push a git tag.
+Build the go client and server as explained above. Create and tag a release on GitHub
+and attach the client and server you just built to it.
 
-Travis will create a GitHub release with the client and server binaries.
-
-Images are built and push to ghcr.io by a GitHub action.
+Images are built and pushed to ghcr.io by a GitHub action.
 
 ## Credits
 
