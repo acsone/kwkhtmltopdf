@@ -1,0 +1,34 @@
+name: Test
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-18.04
+    strategy:
+      matrix:
+        WKHTMLTOPDF_VERSION:
+          - "0.12.1.3"
+          - "0.12.5"
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install dependencies
+        run: |
+          pip install tox
+          sudo apt-get -y install -f ghostscript python-requests
+          # overwrite default imagemagick policy that prevents reading PDF
+          sudo cp tests/travis-imagemagick-policy.xml /etc/ImageMagick-6/policy.xml
+      - name: Install kwkhtmltopdf for local tests
+        run: |
+          wget -q -O wkhtmltox.deb https://github.com/wkhtmltopdf/wkhtmltopdf/releases/download/0.12.5/wkhtmltox_0.12.5-1.bionic_amd64.deb
+          sudo apt -y install -f ./wkhtmltox.deb
+      - name: Build and start server image
+        run: |
+          docker build -f Dockerfile-${{ matrix.WKHTMLTOPDF_VERSION }} -t kwkhtmltopdf:${{ matrix.WKHTMLTOPDF_VERSION }} .
+          docker run -d --name kwkhtmltopdf -p 8080:8080 kwkhtmltopdf:${{ matrix.WKHTMLTOPDF_VERSION }}
+      - name: Run tests
+        run: KWKHTMLTOPDF_SERVER_URL=http://localhost:8080 WKHTMLTOPDF_VERSION=${{ matrix.WKHTMLTOPDF_VERSION }} tox
