@@ -26,6 +26,13 @@ class ServerError(Error):
 
 def wkhtmltopdf(args):
     url = os.getenv("KWKHTMLTOPDF_SERVER_URL")
+
+    if url == "":
+        raise UsageError("KWKHTMLTOPDF_SERVER_URL not set")
+    elif url == "MOCK":
+        print("wkhtmltopdf 0.12.5 (mock)")
+        return
+
     parts = []
 
     def add_option(option):
