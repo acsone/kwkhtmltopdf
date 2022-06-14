@@ -38,8 +38,10 @@ jobs:
       env:
         - WKHTMLTOPDF_VERSION=0.12.5
     - stage: deploy
+      script:
+      - echo ${GITHUB_PACKAGE_TOKEN} | docker login ghcr.io --username "${GITHUB_PACKAGE_USER}" --password-stdin
+      - BUILD_NAME=${WKHTMLTOPDF_VERSION}-${TRAVIS_BUILD_NUMBER}
+      - docker tag kwkhtmltopdf:${WKHTMLTOPDF_VERSION} ghcr.io/camptocamp/kwkhtmltopdf:${BUILD_NAME}
+      - docker push ghcr.io/camptocamp/kwkhtmltopdf:${BUILD_NAME}
       env:
         - WKHTMLTOPDF_VERSION=0.12.5
-      deploy:
-        provider: script
-        script: bash travis/github_push
