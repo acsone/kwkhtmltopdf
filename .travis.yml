@@ -43,25 +43,3 @@ jobs:
       deploy:
         provider: script
         script: bash travis/github_push
-        on:
-          repo: camptocamp/kwkhtmltopdf
-          tags: true
-    - stage: deploy
-      install:
-        - go build client/go/kwkhtmltopdf_client.go
-        - go build server/kwkhtmltopdf_server.go
-        - sha1sum kwkhtmltopdf_client kwkhtmltopdf_server > SHA1SUMS
-      script: skip
-      after_script: skip
-      deploy:
-        provider: releases
-        api_key:
-          secure: ${GITHUB_PACKAGE_TOKEN}
-        skip_cleanup: true
-        file:
-          - kwkhtmltopdf_client
-          - kwkhtmltopdf_server
-          - SHA1SUMS
-        on:
-          repo: camptocamp/kwkhtmltopdf
-          tags: true
