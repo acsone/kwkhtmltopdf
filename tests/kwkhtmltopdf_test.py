@@ -67,10 +67,10 @@ class Client:
 @pytest.fixture(
     params=[
         "native",
-        "client_test_py",
-        "client_sys_py2",
-        "client_sys_py3",
-        "client_go",
+        # "client_test_py",
+        # "client_sys_py2",
+        # "client_sys_py3",
+        # "client_go",
     ],
     scope="module",
 )

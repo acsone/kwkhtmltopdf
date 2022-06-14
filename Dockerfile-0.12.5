@@ -1,19 +1,20 @@
 # first stage: build kwkhtmltopdf_server
 
-FROM golang:1.11
+FROM golang:1.18.3
+
 WORKDIR /tmp
 COPY server/kwkhtmltopdf_server.go .
 RUN go build kwkhtmltopdf_server.go
 
 # second stage: server with wkhtmltopdf
 
-FROM ubuntu:18.04
+FROM debian:stable-slim
 
 RUN set -x \
   && apt update \
-  && apt -y install --no-install-recommends wget ca-certificates fonts-liberation2 \
-  && wget -q -O /tmp/wkhtmltox.deb https://downloads.wkhtmltopdf.org/0.12/0.12.5/wkhtmltox_0.12.5-1.bionic_amd64.deb \
-  && echo "f1689a1b302ff102160f2693129f789410a1708a /tmp/wkhtmltox.deb" | sha1sum -c - \
+  && apt -y install --no-install-recommends wget ca-certificates fonts-liberation2 fonts-nanum-coding fonts-horai-umefont fonts-wqy-microhei \
+  && wget -q -O /tmp/wkhtmltox.deb https://github.com/wkhtmltopdf/wkhtmltopdf/releases/download/0.12.5/wkhtmltox_0.12.5-1.stretch_amd64.deb \
+  && echo "7e35a63f9db14f93ec7feeb0fce76b30c08f2057 /tmp/wkhtmltox.deb" | sha1sum -c - \
   && apt -y install /tmp/wkhtmltox.deb \
   && apt -y purge wget --autoremove \
   && apt -y clean \
