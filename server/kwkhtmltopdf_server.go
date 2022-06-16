@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"errors"
 	"io"
+	"time"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -164,8 +165,6 @@ func handler(w http.ResponseWriter, r *http.Request) {
 	if debug_enabled != "" {
 		log.Println(args, "starting") // TODO better logging, hide sensitve options
 	}
-	
-
 	cmd := exec.Command(wkhtmltopdfBin(), args...)
 	cmdStdout, err := cmd.StdoutPipe()
 	if err != nil {
@@ -173,6 +172,7 @@ func handler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	cmd.Stderr = os.Stderr
+	start := time.Now()
 	err = cmd.Start()
 	if err != nil {
 		httpError(w, err, http.StatusInternalServerError, addr)
@@ -185,6 +185,8 @@ func handler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	err = cmd.Wait()
+	elapsed := time.Since(start).Seconds()
+	log.Printf("Print from %s took %.6f s", addr, elapsed)
 	if err != nil {
 		httpAbort(w, err, addr)
 		return
