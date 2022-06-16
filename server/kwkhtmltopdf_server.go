@@ -48,13 +48,13 @@ func isDocOption(arg string) bool {
 	return false
 }
 
-func httpError(w http.ResponseWriter, err error, code int) {
-	log.Println(err)
+func httpError(w http.ResponseWriter, err error, code int, addr string) {
+	log.Printf("%s - from host %s", err, addr)
 	http.Error(w, err.Error(), code)
 }
 
-func httpAbort(w http.ResponseWriter, err error) {
-	log.Println(err)
+func httpAbort(w http.ResponseWriter, err error, addr string) {
+	log.Printf("%s - from host %s", err, addr)
 	// abort chunked encoding response as crude way to report error to client
 	wh, ok := w.(http.Hijacker)
 	if !ok {
@@ -63,7 +63,7 @@ func httpAbort(w http.ResponseWriter, err error) {
 	}
 	c, _, err := wh.Hijack()
 	if err != nil {
-		log.Println("cannot abort connection, error not reported to client: ", err)
+		log.Printf("cannot abort connection, error not reported to client: %s from host %s", err, addr)
 		return
 	}
 	c.Close()
@@ -77,30 +77,31 @@ func handler(w http.ResponseWriter, r *http.Request) {
 
 	hostArg, _, err := net.SplitHostPort(r.RemoteAddr)
 	if err != nil {
-		httpError(w, err, http.StatusBadRequest)
+		log.Println("Cannot get remote ip addr")
 		return
 	}
-	addr, err := net.LookupAddr(hostArg)
+	addr_array, err := net.LookupAddr(hostArg)
 	if err != nil {
-		httpError(w, err, http.StatusBadRequest)
+		log.Println("Cannot get resolve DNS addr")
 		return
 	}
+	addr := addr_array[0]
 	log.Printf("Request from : %s", addr)
 
 	if r.Method != http.MethodPost {
-		httpError(w, errors.New("http method not allowed: "+r.Method), http.StatusMethodNotAllowed)
+		httpError(w, errors.New("http method not allowed: "+r.Method), http.StatusMethodNotAllowed, addr)
 		return
 	}
 	if r.URL.Path != "/" && r.URL.Path != "/pdf" {
 		// handle / and /pdf, keep the rest for future use
-		httpError(w, errors.New("path not found: "+r.URL.Path), http.StatusNotFound)
+		httpError(w, errors.New("path not found: "+r.URL.Path), http.StatusNotFound, addr)
 		return
 	}
 
 	// temp dir for files
 	tmpdir, err := ioutil.TempDir("", "kwk")
 	if err != nil {
-		httpError(w, err, http.StatusNotFound)
+		httpError(w, err, http.StatusNotFound, addr)
 		return
 	}
 	defer os.RemoveAll(tmpdir)
@@ -108,7 +109,7 @@ func handler(w http.ResponseWriter, r *http.Request) {
 	// parse request
 	reader, err := r.MultipartReader()
 	if err != nil {
-		httpError(w, err, http.StatusBadRequest)
+		httpError(w, err, http.StatusBadRequest, addr)
 		return
 	}
 	var docOutput bool
@@ -119,7 +120,7 @@ func handler(w http.ResponseWriter, r *http.Request) {
 			break
 		}
 		if err != nil {
-			httpError(w, err, http.StatusBadRequest)
+			httpError(w, err, http.StatusBadRequest, addr)
 			return
 		}
 		if part.FormName() == "option" {
@@ -138,18 +139,18 @@ func handler(w http.ResponseWriter, r *http.Request) {
 			// TODO what if multiple files with same basename?
 			file, err := os.Create(path)
 			if err != nil {
-				httpError(w, err, http.StatusBadRequest)
+				httpError(w, err, http.StatusBadRequest, addr)
 				return
 			}
 			_, err = io.Copy(file, part)
 			file.Close()
 			if err != nil {
-				httpError(w, err, http.StatusBadRequest)
+				httpError(w, err, http.StatusBadRequest, addr)
 				return
 			}
 			args = append(args, path)
 		} else {
-			httpError(w, errors.New("unpexpected part name: "+part.FormName()), http.StatusBadRequest)
+			httpError(w, errors.New("unpexpected part name: "+part.FormName()), http.StatusBadRequest, addr)
 			return
 		}
 	}
@@ -168,28 +169,24 @@ func handler(w http.ResponseWriter, r *http.Request) {
 	cmd := exec.Command(wkhtmltopdfBin(), args...)
 	cmdStdout, err := cmd.StdoutPipe()
 	if err != nil {
-		log.Printf("ERROR: On print request from hostname : %s", addr)
-		httpError(w, err, http.StatusInternalServerError)
+		httpError(w, err, http.StatusInternalServerError, addr)
 		return
 	}
 	cmd.Stderr = os.Stderr
 	err = cmd.Start()
 	if err != nil {
-		log.Printf("ERROR: On print request from hostname : %s", addr)
-		httpError(w, err, http.StatusInternalServerError)
+		httpError(w, err, http.StatusInternalServerError, addr)
 		return
 	}
 	w.WriteHeader(http.StatusOK)
 	_, err = io.Copy(w, cmdStdout)
 	if err != nil {
-		log.Printf("ERROR: On print request from hostname : %s", addr)
-		httpAbort(w, err)
+		httpAbort(w, err, addr)
 		return
 	}
 	err = cmd.Wait()
 	if err != nil {
-		log.Printf("ERROR: On print request from hostname : %s", addr)
-		httpAbort(w, err)
+		httpAbort(w, err, addr)
 		return
 	}
 	if debug_enabled != "" {
