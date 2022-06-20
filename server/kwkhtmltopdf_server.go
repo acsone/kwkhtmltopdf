@@ -82,11 +82,12 @@ func handler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	addr_array, err := net.LookupAddr(hostArg)
+	addr := ""
 	if err != nil {
 		log.Println("Cannot get resolve DNS addr, use IP as fallback")
-		addr := r.RemoteAddr
+		addr = r.RemoteAddr
 	} else {
-		addr := addr_array[0]
+		addr = addr_array[0]
 	}
 	log.Printf("Request from : %s", addr)
 
