@@ -167,17 +167,11 @@ func handler(w http.ResponseWriter, r *http.Request) {
 	if debug_enabled != "" {
 		log.Println(args, "starting") // TODO better logging, hide sensitve options
 	}
-	log.Println("doc=",docOutput) // TODO better logging, hide sensitve options
 	// Create output file
-	outputfile, err := ioutil.TempFile(tmpdir, "output*.pdf")
-	if err != nil {
-		httpError(w, errors.New("Cannot create tmp file"), http.StatusNotFound, addr)
-		return
+	outputfile := filepath.Join(tmpdir, "output.pdf")
+	if !(docOutput)  {
+		args = append(args, outputfile)
 	}
-    if docOutput == false  {
-		args = append(args, outputfile.Name())
-	}
-	log.Println("Args=",args) // TODO better logging, hide sensitve options
 	cmd := exec.Command(wkhtmltopdfBin(), args...)
 	cmdStdout, err := cmd.StdoutPipe()
 	if err != nil {
@@ -192,6 +186,7 @@ func handler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.WriteHeader(http.StatusOK)
+	err = cmd.Wait()
 	if docOutput {
 		_, err = io.Copy(w, cmdStdout)
         if err != nil {
@@ -199,8 +194,7 @@ func handler(w http.ResponseWriter, r *http.Request) {
             return
 	    }
 	} else {
-		file_copy, err := os.Open(outputfile.Name())
-		file_copy.Seek(0, 0)
+		file_copy, err := os.Open(outputfile)
 		if err != nil {
 			httpError(w, errors.New("Cannot read tmp file"), http.StatusNotFound, addr)
 			return
@@ -211,8 +205,6 @@ func handler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-
-	err = cmd.Wait()
 	elapsed := time.Since(start).Seconds()
 	log.Printf("Print from %s took %.6f s", addr, elapsed)
 	if err != nil {
