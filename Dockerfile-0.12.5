@@ -8,7 +8,7 @@ RUN go build kwkhtmltopdf_server.go
 
 # second stage: server with wkhtmltopdf
 
-FROM debian:stable-slim
+FROM debian:bullseye-slim 
 
 RUN set -x \
   && apt update \
