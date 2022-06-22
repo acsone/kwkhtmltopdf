@@ -116,6 +116,7 @@ func handler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var docOutput bool
+
 	var args []string
 	args = append(args, "--use-xserver")
 	for {
@@ -163,10 +164,14 @@ func handler(w http.ResponseWriter, r *http.Request) {
 		w.Header().Add("Content-Type", "text/plain")
 	} else {
 		w.Header().Add("Content-Type", "application/pdf")
-		args = append(args, "-")
 	}
 	if debug_enabled != "" {
 		log.Println(args, "starting") // TODO better logging, hide sensitve options
+	}
+	// Create output file
+	outputfile := filepath.Join(tmpdir, "output.pdf")
+	if !(docOutput)  {
+		args = append(args, outputfile)
 	}
 	cmd := exec.Command(wkhtmltopdfBin(), args...)
 	cmdStdout, err := cmd.StdoutPipe()
@@ -182,12 +187,25 @@ func handler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.WriteHeader(http.StatusOK)
-	_, err = io.Copy(w, cmdStdout)
-	if err != nil {
-		httpAbort(w, err, addr)
-		return
-	}
 	err = cmd.Wait()
+	if docOutput {
+		_, err = io.Copy(w, cmdStdout)
+        if err != nil {
+            httpAbort(w, err, addr)
+            return
+	    }
+	} else {
+		file_copy, err := os.Open(outputfile)
+		if err != nil {
+			httpError(w, errors.New("Cannot read tmp file"), http.StatusNotFound, addr)
+			return
+		}
+		_, err = io.Copy(w, file_copy)
+		if err != nil {
+			httpAbort(w, err, addr)
+			return
+		}
+	}
 	elapsed := time.Since(start).Seconds()
 	log.Printf("Print from %s took %.6f s", addr, elapsed)
 	if err != nil {
