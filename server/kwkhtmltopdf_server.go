@@ -117,6 +117,7 @@ func handler(w http.ResponseWriter, r *http.Request) {
 	}
 	var docOutput bool
 	var args []string
+	args = append(args, "--use-xserver")
 	for {
 		part, err := reader.NextPart()
 		if err == io.EOF {
