@@ -1,9 +1,13 @@
 # first stage: build kwkhtmltopdf_server
 
 FROM golang:1.18.3
-
-WORKDIR /tmp
+RUN mkdir /tmp/kwkhtml
+WORKDIR /tmp/kwkhtml
 COPY server/kwkhtmltopdf_server.go .
+RUN go mod init kwkhtml
+RUN go get -u github.com/rs/zerolog/log@v1.27.0
+RUN go get -u github.com/pkg/errors@v0.9.1
+
 RUN go build kwkhtmltopdf_server.go
 
 # second stage: server with wkhtmltopdf
@@ -20,7 +24,7 @@ RUN set -x \
   && apt -y clean \
   && rm -rf /var/lib/apt/lists/*
 
-COPY --from=0 /tmp/kwkhtmltopdf_server /usr/local/bin/
+COPY --from=0 /tmp/kwkhtml/kwkhtmltopdf_server /usr/local/bin/
 
 RUN adduser --disabled-password --gecos '' kwkhtmltopdf
 USER kwkhtmltopdf
