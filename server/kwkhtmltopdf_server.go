@@ -207,7 +207,6 @@ func handler(w http.ResponseWriter, r *http.Request) {
             return
 	    }
 		file_copy, err := os.Open(outputfile)
-		log.Info().Err(err).Msg(outputfile)
 		if err != nil {
 			httpError(w, err, http.StatusNotFound, addr)
 			return
