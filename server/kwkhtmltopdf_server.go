@@ -6,12 +6,14 @@ import (
 	"io"
 	"time"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"os"
 	"net"
 	"os/exec"
 	"path/filepath"
+	"github.com/rs/zerolog/pkgerrors"
+	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
 )
 
 // TODO ignore opts?
@@ -50,21 +52,21 @@ func isDocOption(arg string) bool {
 }
 
 func httpError(w http.ResponseWriter, err error, code int, addr string) {
-	log.Printf("%s - from host %s", err, addr)
+	log.Error().Str("From", addr).Stack().Err(err).Msg("")
 	http.Error(w, err.Error(), code)
 }
 
 func httpAbort(w http.ResponseWriter, err error, addr string) {
-	log.Printf("%s - from host %s", err, addr)
+	log.Error().Str("From", addr).Stack().Err(err).Msg("")
 	// abort chunked encoding response as crude way to report error to client
 	wh, ok := w.(http.Hijacker)
 	if !ok {
-		log.Println("cannot abort connection, error not reported to client: http.Hijacker not supported")
+		log.Fatal().Msg("cannot abort connection, error not reported to client: http.Hijacker not supported")
 		return
 	}
 	c, _, err := wh.Hijack()
 	if err != nil {
-		log.Printf("cannot abort connection, error not reported to client: %s from host %s", err, addr)
+		log.Fatal().Str("From", addr).Err(err).Msg("cannot abort connection, error not reported to client: http.Hijacker not supported")
 		return
 	}
 	c.Close()
@@ -73,23 +75,23 @@ func httpAbort(w http.ResponseWriter, err error, addr string) {
 func handler(w http.ResponseWriter, r *http.Request) {
 	debug_enabled := os.Getenv("DEBUG")
 	if debug_enabled != "" {
-		log.Printf("%s %s", r.Method, r.URL.Path)
+		log.Info().Str("Method", r.Method).Str("Url",r.URL.Path).Msg("Parameters")
 	}
 
 	hostArg, _, err := net.SplitHostPort(r.RemoteAddr)
 	if err != nil {
-		log.Println("Cannot get remote ip addr")
+		log.Warn().Err(err).Msg("Cannot get remote ip addr")
 		return
 	}
 	addr_array, err := net.LookupAddr(hostArg)
 	addr := ""
 	if err != nil {
-		log.Println("Cannot get resolve DNS addr, use IP as fallback")
-		addr = r.RemoteAddr
+		log.Warn().Err(err).Msg("Cannot get resolve DNS addr, use IP as fallback")
+		addr = hostArg
 	} else {
 		addr = addr_array[0]
 	}
-	log.Printf("Request from : %s", addr)
+	log.Info().Str("From",addr).Msg("Request Received")
 
 	if r.Method != http.MethodPost {
 		httpError(w, errors.New("http method not allowed: "+r.Method), http.StatusMethodNotAllowed, addr)
@@ -165,7 +167,7 @@ func handler(w http.ResponseWriter, r *http.Request) {
 		w.Header().Add("Content-Type", "application/pdf")
 	}
 	if debug_enabled != "" {
-		log.Println(args, "starting") // TODO better logging, hide sensitve options
+		log.Info().Msg("starting")
 	}
 	// Create output file
 	outputfile := filepath.Join(tmpdir, "output.pdf")
@@ -186,7 +188,6 @@ func handler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.WriteHeader(http.StatusOK)
-	err = cmd.Wait()
 	if docOutput {
 		_, err = io.Copy(w, cmdStdout)
         if err != nil {
@@ -204,21 +205,26 @@ func handler(w http.ResponseWriter, r *http.Request) {
 			httpAbort(w, err, addr)
 			return
 		}
+		file_copy.Close()
 	}
+	err = cmd.Wait()
 	elapsed := time.Since(start).Seconds()
-	log.Printf("Print from %s took %.6f s", addr, elapsed)
+	log.Info().Float64("Duration", elapsed).Str("From", addr).Msg("Printing duration")
 	if err != nil {
 		httpAbort(w, err, addr)
 		return
 	}
 	if debug_enabled != "" {
-		log.Println(args, "success")
+		log.Info().Msg("success")
 	}
 
 }
 
 func main() {
+	// Setup loggin structure
+	zerolog.TimeFieldFormat = zerolog.TimeFormatUnix
+	zerolog.ErrorStackMarshaler = pkgerrors.MarshalStack
 	http.HandleFunc("/", handler)
-	log.Println("kwkhtmltopdf server listening on port 8080")
-	log.Fatal(http.ListenAndServe(":8080", nil))
+	log.Info().Msg("kwkhtmltopdf server listening on port 8080")
+	log.Fatal().Err((http.ListenAndServe(":8080", nil))).Msg("")
 }
