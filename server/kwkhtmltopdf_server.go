@@ -194,10 +194,22 @@ func handler(w http.ResponseWriter, r *http.Request) {
             httpAbort(w, err, addr)
             return
 	    }
-	} else {
+        err = cmd.Wait()
+        if err != nil {
+            httpAbort(w, err, addr)
+            return
+	    }
+
+    } else {
+        err = cmd.Wait()
+        if err != nil {
+            httpAbort(w, err, addr)
+            return
+	    }
 		file_copy, err := os.Open(outputfile)
+		log.Info().Err(err).Msg(outputfile)
 		if err != nil {
-			httpError(w, errors.New("Cannot read tmp file"), http.StatusNotFound, addr)
+			httpError(w, err, http.StatusNotFound, addr)
 			return
 		}
 		_, err = io.Copy(w, file_copy)
@@ -207,13 +219,8 @@ func handler(w http.ResponseWriter, r *http.Request) {
 		}
 		file_copy.Close()
 	}
-	err = cmd.Wait()
 	elapsed := time.Since(start).Seconds()
 	log.Info().Float64("Duration", elapsed).Str("From", addr).Msg("Printing duration")
-	if err != nil {
-		httpAbort(w, err, addr)
-		return
-	}
 	if debug_enabled != "" {
 		log.Info().Msg("success")
 	}
