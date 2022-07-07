@@ -86,7 +86,7 @@ func handler(w http.ResponseWriter, r *http.Request) {
 	addr_array, err := net.LookupAddr(hostArg)
 	addr := ""
 	if err != nil {
-		log.Warn().Err(err).Msg("Cannot get resolve DNS addr, use IP as fallback")
+		// We can't get the dns , so we use ip instead
 		addr = hostArg
 	} else {
 		addr = addr_array[0]
