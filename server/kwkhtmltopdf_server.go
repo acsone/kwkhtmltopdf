@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"strings"
 	"errors"
 	"io"
 	"time"
@@ -91,8 +92,6 @@ func handler(w http.ResponseWriter, r *http.Request) {
 	} else {
 		addr = addr_array[0]
 	}
-	log.Info().Str("From",addr).Msg("Request Received")
-
 	if r.Method != http.MethodPost {
 		httpError(w, errors.New("http method not allowed: "+r.Method), http.StatusMethodNotAllowed, addr)
 		return
@@ -169,6 +168,7 @@ func handler(w http.ResponseWriter, r *http.Request) {
 	if debug_enabled != "" {
 		log.Info().Msg("starting")
 	}
+	log.Info().Str("From",addr).Str("Args",strings.Join(args, " ")).Msg("Request Received")
 	// Create output file
 	outputfile := filepath.Join(tmpdir, "output.pdf")
 	if !(docOutput)  {
