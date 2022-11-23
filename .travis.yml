@@ -10,7 +10,7 @@ services:
 stages:
   - name: test
   - name: deploy
-    if: tag IS present
+    if: tag IS present OR branch = devel
 
 install:
   - pip install tox-travis

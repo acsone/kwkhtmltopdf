@@ -108,7 +108,7 @@ func handler(w http.ResponseWriter, r *http.Request) {
 		httpError(w, err, http.StatusNotFound, addr)
 		return
 	}
-	defer os.RemoveAll(tmpdir)
+	//defer os.RemoveAll(tmpdir)
 
 	// parse request
 	reader, err := r.MultipartReader()
