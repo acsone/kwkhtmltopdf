@@ -18,7 +18,7 @@ RUN set -x \
   && apt update \
   && apt -y install --no-install-recommends wget ca-certificates fonts-liberation2 fonts-nanum-coding fonts-horai-umefont fonts-wqy-microhei fonts-lato curl nano vim \
   && wget -q -O /tmp/wkhtmltox.deb https://github.com/odoo/wkhtmltopdf/releases/download/nightly/wkhtmltox_0.13.0-1.nightly.bookworm_amd64.deb \
-  && echo "c5e136213dc1fa27c6b1b616c9818b0c /tmp/wkhtmltox.deb" | sha1sum -c - \
+  && echo "a8f28ec5a71d18a4791e48ece56ad7395fd0f935 /tmp/wkhtmltox.deb" | sha1sum -c - \
   && apt -y install /tmp/wkhtmltox.deb \
   && apt -y purge wget --autoremove \
   && apt -y clean \
