@@ -12,18 +12,17 @@ RUN go build kwkhtmltopdf_server.go
 
 # second stage: server with wkhtmltopdf
 
-FROM debian:bullseye-slim 
+FROM debian:bookworm-slim 
 
 RUN set -x \
   && apt update \
-  && apt -y install --no-install-recommends wget ca-certificates fonts-liberation2 fonts-nanum-coding fonts-horai-umefont fonts-wqy-microhei curl nano vim \
-  && wget -q -O /tmp/wkhtmltox.deb https://github.com/wkhtmltopdf/wkhtmltopdf/releases/download/0.12.5/wkhtmltox_0.12.5-1.buster_amd64.deb \
-  && echo "ea8277df4297afc507c61122f3c349af142f31e5 /tmp/wkhtmltox.deb" | sha1sum -c - \
+  && apt -y install --no-install-recommends wget ca-certificates fonts-liberation2 fonts-nanum-coding fonts-horai-umefont fonts-wqy-microhei \  
+  && wget -q -O /tmp/wkhtmltox.deb https://github.com/odoo/wkhtmltopdf/releases/download/nightly/wkhtmltox_0.13.0-1.nightly.bookworm_amd64.deb \
+  && echo "a8f28ec5a71d18a4791e48ece56ad7395fd0f935 /tmp/wkhtmltox.deb" | sha1sum -c - \
   && apt -y install /tmp/wkhtmltox.deb \
   && apt -y purge wget --autoremove \
   && apt -y clean \
   && rm -rf /var/lib/apt/lists/*
-
 COPY --from=0 /tmp/kwkhtml/kwkhtmltopdf_server /usr/local/bin/
 
 RUN adduser --disabled-password --gecos '' kwkhtmltopdf
