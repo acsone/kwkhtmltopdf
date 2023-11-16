@@ -45,6 +45,6 @@ jobs:
           context: .
           platforms: linux/amd64
           push: true
-          tags: ${{ steps.meta-kwkhtmltopdf.tags }}
-          labels: ${{ steps.meta-kwkhtmltopdf.labels }}
+          tags: ${{ steps.meta-kwkhtmltopdf.outputs.tags }}
+          labels: ${{ steps.meta-kwkhtmltopdf.outputs.labels }}
 
