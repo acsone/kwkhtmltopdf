@@ -28,7 +28,7 @@ jobs:
       - name: Login to ghio
         uses: docker/login-action@v1
         with:
-          registry: camptocampdev.azurecr.io
+          registry: ghcr.io 
           username: ${{ secrets.GH_USER }}
           password: ${{ secrets.GH_TOKEN }}
 
