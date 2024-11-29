@@ -40,7 +40,7 @@ There are two clients:
 ### Run the server
 
 ```
-$ docker run --rm -p 8080:8080 ghcr.io/acsone/kwkhtmltopdf:0.12.5-latest
+$ docker run --rm -p 8080:8080 ghcr.io/acsone/kwkhtmltopdf:0.12.6.1-latest
 ```
 
 or
@@ -50,6 +50,12 @@ $ go run server/kwkhtmltopdf_server.go
 ```
 
 The server should now listen on http://localhost:8080.
+
+#### Note for Apple Silicon users
+
+The docker image is built for amd64. If you are on Apple Silicon,
+you can use it by disabling the `Use Rosetta for x86_64/amd64 emulation on Apple Silicon` option
+in the Docker Desktop general settings first.
 
 ### Run the client
 
