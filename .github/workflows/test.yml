@@ -8,7 +8,7 @@ on:
 
 jobs:
   test:
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-22.04
     strategy:
       matrix:
         WKHTMLTOPDF_VERSION:
@@ -20,12 +20,12 @@ jobs:
       - name: Install dependencies
         run: |
           pip install tox
-          sudo apt-get -y install -f ghostscript python-requests
+          sudo apt-get -y install -f ghostscript python3-requests
           # overwrite default imagemagick policy that prevents reading PDF
           sudo cp tests/travis-imagemagick-policy.xml /etc/ImageMagick-6/policy.xml
       - name: Install kwkhtmltopdf for local tests
         run: |
-          wget -q -O wkhtmltox.deb https://github.com/wkhtmltopdf/wkhtmltopdf/releases/download/0.12.5/wkhtmltox_0.12.5-1.bionic_amd64.deb
+          wget -q -O wkhtmltox.deb https://github.com/wkhtmltopdf/packaging/releases/download/0.12.6.1-2/wkhtmltox_0.12.6.1-2.jammy_amd64.deb
           sudo apt -y install -f ./wkhtmltox.deb
       - name: Build and start server image
         run: |
