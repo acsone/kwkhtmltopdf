@@ -53,20 +53,29 @@ The server should now listen on http://localhost:8080.
 
 ### Run the client
 
+Any of the following should generate a printout of the wkhtmltopdf home page to /tmp/test.pdf.
+
+#### Using the built binary
+
 ```
 $ go build -o client/go/kwkhtmltopdf_client client/go/kwkhtmltopdf_client.go
 $ env KWKHTMLTOPDF_SERVER_URL=http://localhost:8080 \
     client/go/kwkhtmltopdf_client https://wkhtmltopdf.org /tmp/test.pdf
 ```
 
-or
+#### Using the Go client
+
+```
+$ env KWKHTMLTOPDF_SERVER_URL=http://localhost:8080 \
+    go run client/go/kwkhtmltopdf_client.go https://wkhtmltopdf.org /tmp/test.pdf
+```
+
+#### Using the Python client
 
 ```
 $ env KWKHTMLTOPDF_SERVER_URL=http://localhost:8080 \
     client/python/kwkhtmltopdf_client.py https://wkhtmltopdf.org /tmp/test.pdf
 ```
-
-This should generate a printout of the wkhtmltopdf home page to /tmp/test.pdf.
 
 ## Run tests
 
