@@ -35,6 +35,16 @@ There are two clients:
 * a python client, which only depends on the `requests` library.
   It should work with any python version supported by `requests`.
 
+### mock server
+
+Odoo [checks for `wkhtmltopdf`'s version on start](https://github.com/odoo/odoo/blob/12.0/odoo/addons/base/models/ir_actions_report.py#L58).
+
+In a CI context, we don't necessarily want to run the `kwkhtmtopdf` container.
+But we definitely want Odoo to start.
+
+To support this case, you can set `KWKHTMLTOPDF_SERVER_URL=MOCK`: the client will
+then return `wkhtmltopdf 0.12.5 (mock)` when called with `--version` flag.
+
 ## Quick start
 
 ### Run the server

@@ -40,6 +40,9 @@ func do() error {
 	serverURL := os.Getenv("KWKHTMLTOPDF_SERVER_URL")
 	if serverURL == "" {
 		return errors.New("KWKHTMLTOPDF_SERVER_URL not set")
+	} else if serverURL == "MOCK" {
+		os.Stdout.WriteString("wkhtmltopdf 0.12.5 (mock)\n")
+		return nil
 	}
 
 	// detect if last argument is output file, and create it
