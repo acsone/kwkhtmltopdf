@@ -68,8 +68,6 @@ class Client:
     params=[
         "native",
         "client_test_py",
-        "client_sys_py2",
-        "client_sys_py3",
         "client_go",
     ],
     scope="module",
@@ -81,22 +79,6 @@ def client(request):
         # run the client with same python as test suite
         yield Client(
             [os.path.join(HERE, "..", "client", "python", "kwkhtmltopdf_client.py")]
-        )
-    elif request.param == "client_sys_py2":
-        # run the client with the system python2
-        yield Client(
-            [
-                "/usr/bin/python2",
-                os.path.join(HERE, "..", "client", "python", "kwkhtmltopdf_client.py"),
-            ]
-        )
-    elif request.param == "client_sys_py3":
-        # run the client with the system python2
-        yield Client(
-            [
-                "/usr/bin/python3",
-                os.path.join(HERE, "..", "client", "python", "kwkhtmltopdf_client.py"),
-            ]
         )
     elif request.param == "client_go":
         yield Client(
