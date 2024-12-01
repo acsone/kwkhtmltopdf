@@ -110,9 +110,8 @@ Images are built and pushed to ghcr.io by a GitHub action.
 
 Author: stephane.bidoul@acsone.eu.
 
-Contributors:
-
-* Nils Hamerlinck
+Contributors are visible on
+[GitHub](https://github.com/acsone/kwkhtmltopdf/graphs/contributors).
 
 ## License
 
