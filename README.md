@@ -99,7 +99,7 @@ as well as some TODO's in the source code.
 
 ## Releasing
 
-Push the master branch and ensure tests pass on travis.
+Push the master branch and ensure tests pass on GitHub.
 
 Build the go client and server as explained above. Create and tag a release on GitHub
 and attach the client and server you just built to it.
