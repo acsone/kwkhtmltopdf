@@ -9,8 +9,10 @@ Before running these tests,
 import os
 import re
 import subprocess
+from urllib.parse import urljoin
 
 import pytest
+import requests
 from wand.image import Image
 
 HERE = os.path.dirname(__file__)
@@ -139,3 +141,9 @@ def test_3_accent_arg(client, tmp_path):
     client._run_expect_file(
         ["--header-left", "Héllo", "test1.html", tmp_path / "o.pdf"], "test3"
     )
+
+
+def test_status():
+    requests.get(
+        urljoin(os.getenv("KWKHTMLTOPDF_SERVER_URL"), "/status")
+    ).raise_for_status()

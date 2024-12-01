@@ -69,7 +69,14 @@ func httpAbort(w http.ResponseWriter, err error) {
 }
 
 func handler(w http.ResponseWriter, r *http.Request) {
-	log.Printf("%s %s", r.Method, r.URL.Path)
+
+	if r.URL.Path == "/status" {
+		w.WriteHeader(http.StatusOK)
+		return
+	} else {
+		// don't log status
+		log.Printf("%s %s", r.Method, r.URL.Path)
+	}
 	if r.Method != http.MethodPost {
 		httpError(w, errors.New("http method not allowed: "+r.Method), http.StatusMethodNotAllowed)
 		return
