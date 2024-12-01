@@ -4,3 +4,4 @@ __pycache__/
 .pytest_cache/
 .tox/
 /client/go/kwkhtmltopdf_client
+/server/kwkhtmltopdf_server
