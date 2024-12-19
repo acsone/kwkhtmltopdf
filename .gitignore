@@ -5,3 +5,4 @@ __pycache__/
 .tox/
 /client/go/kwkhtmltopdf_client
 /server/kwkhtmltopdf_server
+.idea/
