@@ -84,8 +84,9 @@ func do() error {
 	}
 	w.Close()
 
-	// post request
-	resp, err := http.Post(serverURL, w.FormDataContentType(), &postBuf)
+	// post request to image endpoint
+	endpoint := serverURL + "/image"
+	resp, err := http.Post(endpoint, w.FormDataContentType(), &postBuf)
 	if err != nil {
 		return err
 	}
