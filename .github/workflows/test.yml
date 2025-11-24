@@ -16,7 +16,7 @@ jobs:
           - "0.12.5"
           - "0.12.6.1"
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - name: Install dependencies
         run: |
           pip install tox
