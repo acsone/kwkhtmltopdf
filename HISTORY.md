@@ -1,3 +1,9 @@
+# 1.1 (2026-04-20)
+
+- Server: add `POST /image` for HTML → image via `wkhtmltoimage` (multipart API aligned
+  with `/pdf`, default `format=png`, reject empty output). Prometheus metrics `image_*`.
+  Environment variable `KWKHTMLTOIMAGE_BIN` overrides the binary path.
+
 # 1.0 (2024-12-01)
 
 - Dockerfile: add 0.12.6.1 image.

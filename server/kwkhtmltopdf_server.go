@@ -278,6 +278,7 @@ func main() {
 	router := http.NewServeMux()
 	router.HandleFunc("/status", withTraceID(statusHandler))
 	router.HandleFunc("/pdf", withTraceID(pdfHandler))
+	router.HandleFunc("/image", withTraceID(imageHandler))
 	router.Handle("/metrics", promhttp.Handler())
 
 	log.Println("kwkhtmltopdf server listening on port 8080")
