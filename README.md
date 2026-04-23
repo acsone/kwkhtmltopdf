@@ -31,8 +31,10 @@ the above server defined in the `KWKHTMLTOPDF_SERVER_URL` environment variable.
 
 There are two clients:
 
-* a go client (preferred)
-* a python client, which only depends on the `requests` library.
+- go clients (preferred):
+  - PDF: `client/go/pdf/kwkhtmltopdf_client.go`
+  - Image: `client/go/image/kwkhtmltoimage_client.go`
+- a python client, which only depends on the `requests` library.
   It should work with any python version supported by `requests`.
 
 ## Quick start
@@ -63,22 +65,29 @@ Any of the following should generate a printout of the wkhtmltopdf home page to 
 
 #### Using the built binary
 
-```
-$ go build -o client/go/kwkhtmltopdf_client client/go/kwkhtmltopdf_client.go
+```sh
+$ go build -o client/go/kwkhtmltopdf_client client/go/pdf/kwkhtmltopdf_client.go
+$ go build -o client/go/kwkhtmltoimage_client client/go/image/kwkhtmltoimage_client.go
 $ env KWKHTMLTOPDF_SERVER_URL=http://localhost:8080 \
     client/go/kwkhtmltopdf_client https://wkhtmltopdf.org /tmp/test.pdf
+
+$ env KWKHTMLTOPDF_SERVER_URL=http://localhost:8080 \
+  client/go/kwkhtmltoimage_client https://wkhtmltopdf.org /tmp/test.png
 ```
 
 #### Using the Go client
 
-```
+```sh
 $ env KWKHTMLTOPDF_SERVER_URL=http://localhost:8080 \
-    go run client/go/kwkhtmltopdf_client.go https://wkhtmltopdf.org /tmp/test.pdf
+  go run client/go/pdf/kwkhtmltopdf_client.go https://wkhtmltopdf.org /tmp/test.pdf
+
+$ env KWKHTMLTOPDF_SERVER_URL=http://localhost:8080 \
+  go run client/go/image/kwkhtmltoimage_client.go https://wkhtmltopdf.org /tmp/test.png
 ```
 
 #### Using the Python client
 
-```
+```sh
 $ env KWKHTMLTOPDF_SERVER_URL=http://localhost:8080 \
     client/python/kwkhtmltopdf_client.py https://wkhtmltopdf.org /tmp/test.pdf
 ```
@@ -91,6 +100,23 @@ $ env KWKHTMLTOPDF_SERVER_URL=http://localhost:8080 \
 
 This will run the same tests against the the native wkhtmltopdf executable,
 as well as against the server using the python and go clients.
+
+### Alternative test
+
+Using "act" you can run the github action "test" locally
+
+Note: requires docker and [act](https://github.com/nektos/act)
+
+```sh
+DOCKER_GRUOP=$(getent group docker | cut -d ":" -f 3)
+act -W .github/workflows/test.yml -j test -P ubuntu-22.04=ghcr.io/catthehacker/ubuntu:full-22.04 --container-options "--privileged --group-add $DOCKER_GRUOP" --container-daemon-socket unix:///var/run/docker.sock --container-architecture linux/amd64
+```
+
+If you need to test a new server side you need to build it locally first
+
+```sh
+docker build -f Dockerfile-0.12.6.2 -t kwkhtmltopdf:0.12.6.2 .
+```
 
 ## Roadmap
 
