@@ -41,17 +41,19 @@ There are two clients:
 
 ### Run the server
 
-```
+```sh
 $ docker run --rm -p 8080:8080 ghcr.io/acsone/kwkhtmltopdf:0.12.6.1-latest
 ```
 
 or
 
-```
+```sh
 $ go run server/kwkhtmltopdf_server.go
 ```
 
 The server should now listen on http://localhost:8080.
+
+Available endpoints: `/` (PDF), `/pdf` (PDF), `/image` (Image), `/status` (Health check), `/metrics` (Prometheus).
 
 #### Note for Apple Silicon users
 

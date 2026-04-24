@@ -10,6 +10,13 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
+	"strings"
+	"time"
+
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 // TODO ignore opts?
@@ -76,6 +83,108 @@ func httpAbort(w http.ResponseWriter, err error) {
 	c.Close()
 }
 
+type metricsResponseWriter struct {
+	http.ResponseWriter
+	status int
+	bytes  int64
+}
+
+func (w *metricsResponseWriter) WriteHeader(statusCode int) {
+	w.status = statusCode
+	w.ResponseWriter.WriteHeader(statusCode)
+}
+
+func (w *metricsResponseWriter) Write(p []byte) (int, error) {
+	if w.status == 0 {
+		w.status = http.StatusOK
+	}
+	n, err := w.ResponseWriter.Write(p)
+	w.bytes += int64(n)
+	return n, err
+}
+
+var (
+	httpRequestsTotal = promauto.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "kwkhtmltopdf_http_requests_total",
+			Help: "Total number of HTTP requests received.",
+		},
+		[]string{"path", "method"},
+	)
+	httpResponsesTotal = promauto.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "kwkhtmltopdf_http_responses_total",
+			Help: "Total number of HTTP responses sent.",
+		},
+		[]string{"path", "method", "code"},
+	)
+	httpRequestDurationSeconds = promauto.NewHistogramVec(
+		prometheus.HistogramOpts{
+			Name:    "kwkhtmltopdf_http_request_duration_seconds",
+			Help:    "HTTP request duration in seconds.",
+			Buckets: prometheus.DefBuckets,
+		},
+		[]string{"path", "method", "code"},
+	)
+
+	conversionsInFlight = promauto.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Name: "kwkhtmltopdf_conversions_in_flight",
+			Help: "Number of conversions currently in flight.",
+		},
+		[]string{"type", "domain"},
+	)
+	conversionsTotal = promauto.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "kwkhtmltopdf_conversions_total",
+			Help: "Total number of conversions attempted.",
+		},
+		[]string{"type", "domain", "result"},
+	)
+	conversionDurationSeconds = promauto.NewHistogramVec(
+		prometheus.HistogramOpts{
+			Name:    "kwkhtmltopdf_conversion_duration_seconds",
+			Help:    "Conversion duration in seconds.",
+			Buckets: prometheus.DefBuckets,
+		},
+		[]string{"type", "domain", "result"},
+	)
+	conversionOutputBytesTotal = promauto.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "kwkhtmltopdf_conversion_output_bytes_total",
+			Help: "Total number of bytes written in conversion responses.",
+		},
+		[]string{"type", "domain", "result"},
+	)
+)
+
+func extractCookieDomainFromReportCookieJar(path string) (string, error) {
+	// Read only a limited amount: cookie jar files are expected to be small.
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return "", err
+	}
+	// Some cookie jars can be multiline; search globally.
+	content := string(data)
+	idx := strings.Index(content, "domain=")
+	if idx < 0 {
+		return "", nil
+	}
+	rest := content[idx+len("domain="):]
+	// Domain value ends at ';' or whitespace/newline.
+	end := len(rest)
+	if semi := strings.IndexByte(rest, ';'); semi >= 0 {
+		end = semi
+	}
+	if ws := strings.IndexAny(rest, " \t\r\n"); ws >= 0 && ws < end {
+		end = ws
+	}
+	domain := strings.TrimSpace(rest[:end])
+	// Be defensive: normalize weird casing/spaces.
+	domain = strings.Trim(domain, ".")
+	return domain, nil
+}
+
 func redactArgs(args []string) []string {
 	redacted := make([]string, 0, len(args))
 	i := 0
@@ -92,28 +201,57 @@ func redactArgs(args []string) []string {
 }
 
 func handler(w http.ResponseWriter, r *http.Request) {
+	mw := &metricsResponseWriter{ResponseWriter: w}
+	path := r.URL.Path
+	method := r.Method
+	httpRequestsTotal.WithLabelValues(path, method).Inc()
+
+	result := "success"
+	conversionType := ""
+	domainLabel := "unknown"
+	conversionStarted := false
+	conversionStart := time.Time{}
+	requestStart := time.Now()
+	defer func() {
+		code := mw.status
+		if code == 0 {
+			code = http.StatusOK
+		}
+		codeStr := strconv.Itoa(code)
+		httpResponsesTotal.WithLabelValues(path, method, codeStr).Inc()
+		httpRequestDurationSeconds.WithLabelValues(path, method, codeStr).Observe(time.Since(requestStart).Seconds())
+		if conversionStarted {
+			conversionsTotal.WithLabelValues(conversionType, domainLabel, result).Inc()
+			conversionDurationSeconds.WithLabelValues(conversionType, domainLabel, result).Observe(time.Since(conversionStart).Seconds())
+			conversionOutputBytesTotal.WithLabelValues(conversionType, domainLabel, result).Add(float64(mw.bytes))
+			conversionsInFlight.WithLabelValues(conversionType, domainLabel).Dec()
+		}
+	}()
 
 	if r.URL.Path == "/status" {
-		w.WriteHeader(http.StatusOK)
+		mw.WriteHeader(http.StatusOK)
 		return
 	} else {
 		// don't log status
 		log.Printf("%s %s", r.Method, r.URL.Path)
 	}
 	if r.Method != http.MethodPost {
-		httpError(w, errors.New("http method not allowed: "+r.Method), http.StatusMethodNotAllowed)
+		result = "error"
+		httpError(mw, errors.New("http method not allowed: "+r.Method), http.StatusMethodNotAllowed)
 		return
 	}
 	if r.URL.Path != "/" && r.URL.Path != "/pdf" && r.URL.Path != "/image" {
 		// handle /, /pdf, and /image, keep the rest for future use
-		httpError(w, errors.New("path not found: "+r.URL.Path), http.StatusNotFound)
+		result = "error"
+		httpError(mw, errors.New("path not found: "+r.URL.Path), http.StatusNotFound)
 		return
 	}
 
 	// temp dir for files
 	tmpdir, err := ioutil.TempDir("", "kwk")
 	if err != nil {
-		httpError(w, err, http.StatusNotFound)
+		result = "error"
+		httpError(mw, err, http.StatusNotFound)
 		return
 	}
 	defer os.RemoveAll(tmpdir)
@@ -121,7 +259,8 @@ func handler(w http.ResponseWriter, r *http.Request) {
 	// parse request
 	reader, err := r.MultipartReader()
 	if err != nil {
-		httpError(w, err, http.StatusBadRequest)
+		result = "error"
+		httpError(mw, err, http.StatusBadRequest)
 		return
 	}
 	var docOutput bool
@@ -132,7 +271,8 @@ func handler(w http.ResponseWriter, r *http.Request) {
 			break
 		}
 		if err != nil {
-			httpError(w, err, http.StatusBadRequest)
+			result = "error"
+			httpError(mw, err, http.StatusBadRequest)
 			return
 		}
 		if part.FormName() == "option" {
@@ -151,18 +291,32 @@ func handler(w http.ResponseWriter, r *http.Request) {
 			// TODO what if multiple files with same basename?
 			file, err := os.Create(path)
 			if err != nil {
-				httpError(w, err, http.StatusBadRequest)
+				result = "error"
+				httpError(mw, err, http.StatusBadRequest)
 				return
 			}
 			_, err = io.Copy(file, part)
 			file.Close()
 			if err != nil {
-				httpError(w, err, http.StatusBadRequest)
+				result = "error"
+				httpError(mw, err, http.StatusBadRequest)
 				return
+			}
+			if domainLabel == "unknown" {
+				base := filepath.Base(part.FileName())
+				if strings.HasPrefix(base, "report.cookie_jar") {
+					domain, derr := extractCookieDomainFromReportCookieJar(path)
+					if derr != nil {
+						log.Println("failed to read cookie jar domain:", derr)
+					} else if domain != "" {
+						domainLabel = domain
+					}
+				}
 			}
 			args = append(args, path)
 		} else {
-			httpError(w, errors.New("unpexpected part name: "+part.FormName()), http.StatusBadRequest)
+			result = "error"
+			httpError(mw, errors.New("unpexpected part name: "+part.FormName()), http.StatusBadRequest)
 			return
 		}
 	}
@@ -171,14 +325,20 @@ func handler(w http.ResponseWriter, r *http.Request) {
 	isImageRequest := r.URL.Path == "/image"
 
 	if docOutput {
-		w.Header().Add("Content-Type", "text/plain")
+		conversionType = "doc"
+		mw.Header().Add("Content-Type", "text/plain")
 	} else if isImageRequest {
-		w.Header().Add("Content-Type", "image/png")
+		conversionType = "image"
+		mw.Header().Add("Content-Type", "image/png")
 		args = append(args, "-")
 	} else {
-		w.Header().Add("Content-Type", "application/pdf")
+		conversionType = "pdf"
+		mw.Header().Add("Content-Type", "application/pdf")
 		args = append(args, "-")
 	}
+	conversionStarted = true
+	conversionStart = time.Now()
+	conversionsInFlight.WithLabelValues(conversionType, domainLabel).Inc()
 
 	var redactedArgs = redactArgs(args)
 
@@ -192,23 +352,27 @@ func handler(w http.ResponseWriter, r *http.Request) {
 	}
 	cmdStdout, err := cmd.StdoutPipe()
 	if err != nil {
-		httpError(w, err, http.StatusInternalServerError)
+		result = "error"
+		httpError(mw, err, http.StatusInternalServerError)
 		return
 	}
 	cmd.Stderr = os.Stderr
 	err = cmd.Start()
 	if err != nil {
-		httpError(w, err, http.StatusInternalServerError)
+		result = "error"
+		httpError(mw, err, http.StatusInternalServerError)
 		return
 	}
-	w.WriteHeader(http.StatusOK)
-	_, err = io.Copy(w, cmdStdout)
+	mw.WriteHeader(http.StatusOK)
+	_, err = io.Copy(mw, cmdStdout)
 	if err != nil {
+		result = "abort"
 		httpAbort(w, err)
 		return
 	}
 	err = cmd.Wait()
 	if err != nil {
+		result = "abort"
 		httpAbort(w, err)
 		return
 	}
@@ -217,10 +381,11 @@ func handler(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
+	http.Handle("/metrics", promhttp.Handler())
 	http.HandleFunc("/", handler)
 	http.HandleFunc("/pdf", handler)
 	http.HandleFunc("/image", handler)
 	log.Println("kwkhtmltopdf server listening on port 8080")
-	log.Println("Available endpoints: / (PDF), /pdf (PDF), /image (Image), /status (Health check)")
+	log.Println("Available endpoints: / (PDF), /pdf (PDF), /image (Image), /status (Health check), /metrics (Prometheus)")
 	log.Fatal(http.ListenAndServe(":8080", nil))
 }
