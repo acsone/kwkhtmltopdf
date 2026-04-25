@@ -101,23 +101,6 @@ $ env KWKHTMLTOPDF_SERVER_URL=http://localhost:8080 \
 This will run the same tests against the the native wkhtmltopdf executable,
 as well as against the server using the python and go clients.
 
-### Alternative test
-
-Using "act" you can run the github action "test" locally
-
-Note: requires docker and [act](https://github.com/nektos/act)
-
-```sh
-DOCKER_GRUOP=$(getent group docker | cut -d ":" -f 3)
-act -W .github/workflows/test.yml -j test -P ubuntu-22.04=ghcr.io/catthehacker/ubuntu:full-22.04 --container-options "--privileged --group-add $DOCKER_GRUOP" --container-daemon-socket unix:///var/run/docker.sock --container-architecture linux/amd64
-```
-
-If you need to test a new server side you need to build it locally first
-
-```sh
-docker build -f Dockerfile-0.12.6.2 -t kwkhtmltopdf:0.12.6.2 .
-```
-
 ## Roadmap
 
 See [issues on GitHub](<https://github.com/acsone/kwkhtmltopdf/issues>)
