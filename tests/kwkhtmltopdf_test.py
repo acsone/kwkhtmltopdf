@@ -87,7 +87,9 @@ def client(request):
             [
                 "go",
                 "run",
-                os.path.join(HERE, "..", "client", "go", "kwkhtmltopdf_client.go"),
+                os.path.join(
+                    HERE, "..", "client", "go", "pdf", "kwkhtmltopdf_client.go"
+                ),
             ]
         )
 
@@ -147,3 +149,25 @@ def test_status():
     requests.get(
         urljoin(os.getenv("KWKHTMLTOPDF_SERVER_URL"), "/status")
     ).raise_for_status()
+
+
+def test_image_go_client_generates_image(tmp_path):
+    out_path = tmp_path / "o.png"
+    cmd = [
+        "go",
+        "run",
+        os.path.join(HERE, "..", "client", "go", "image", "kwkhtmltoimage_client.go"),
+        "test1.html",
+        str(out_path),
+    ]
+    r = subprocess.call(cmd, cwd=os.path.join(HERE, "data"))
+    assert r == 0
+    with open(out_path, "rb") as f:
+        header = f.read(8)
+
+    # Accept common wkhtmltoimage outputs.
+    # PNG signature: 89 50 4E 47 0D 0A 1A 0A
+    # JPEG signature (prefix): FF D8 FF
+    is_png = header == b"\x89PNG\r\n\x1a\n"
+    is_jpeg = header.startswith(b"\xff\xd8\xff")
+    assert is_png or is_jpeg, "unexpected image signature: %r" % header
