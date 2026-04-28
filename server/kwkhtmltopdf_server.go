@@ -10,13 +10,8 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"strconv"
 	"strings"
 	"time"
-
-	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/client_golang/prometheus/promauto"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 // TODO ignore opts?
@@ -85,72 +80,37 @@ func httpAbort(w http.ResponseWriter, err error) {
 
 type metricsResponseWriter struct {
 	http.ResponseWriter
-	status int
 	bytes  int64
 }
 
 func (w *metricsResponseWriter) WriteHeader(statusCode int) {
-	w.status = statusCode
 	w.ResponseWriter.WriteHeader(statusCode)
 }
 
 func (w *metricsResponseWriter) Write(p []byte) (int, error) {
-	if w.status == 0 {
-		w.status = http.StatusOK
-	}
 	n, err := w.ResponseWriter.Write(p)
 	w.bytes += int64(n)
 	return n, err
 }
 
 var (
-	httpRequestsTotal = promauto.NewCounterVec(
-		prometheus.CounterOpts{
-			Name: "kwkhtmltopdf_http_requests_total",
-			Help: "Total number of HTTP requests received.",
-		},
-		[]string{"path", "method"},
-	)
-	httpResponsesTotal = promauto.NewCounterVec(
-		prometheus.CounterOpts{
-			Name: "kwkhtmltopdf_http_responses_total",
-			Help: "Total number of HTTP responses sent.",
-		},
-		[]string{"path", "method", "code"},
-	)
-	httpRequestDurationSeconds = promauto.NewHistogramVec(
-		prometheus.HistogramOpts{
-			Name:    "kwkhtmltopdf_http_request_duration_seconds",
-			Help:    "HTTP request duration in seconds.",
-			Buckets: prometheus.DefBuckets,
-		},
-		[]string{"path", "method", "code"},
-	)
-
-	conversionsInFlight = promauto.NewGaugeVec(
-		prometheus.GaugeOpts{
-			Name: "kwkhtmltopdf_conversions_in_flight",
-			Help: "Number of conversions currently in flight.",
-		},
-		[]string{"type", "domain"},
-	)
-	conversionsTotal = promauto.NewCounterVec(
-		prometheus.CounterOpts{
+	conversionsTotal = NewCounterVec(
+		CounterOpts{
 			Name: "kwkhtmltopdf_conversions_total",
 			Help: "Total number of conversions attempted.",
 		},
 		[]string{"type", "domain", "result"},
 	)
-	conversionDurationSeconds = promauto.NewHistogramVec(
-		prometheus.HistogramOpts{
+	conversionDurationSeconds = NewHistogramVec(
+		HistogramOpts{
 			Name:    "kwkhtmltopdf_conversion_duration_seconds",
 			Help:    "Conversion duration in seconds.",
-			Buckets: prometheus.DefBuckets,
+			Buckets: DefBuckets,
 		},
 		[]string{"type", "domain", "result"},
 	)
-	conversionOutputBytesTotal = promauto.NewCounterVec(
-		prometheus.CounterOpts{
+	conversionOutputBytesTotal = NewCounterVec(
+		CounterOpts{
 			Name: "kwkhtmltopdf_conversion_output_bytes_total",
 			Help: "Total number of bytes written in conversion responses.",
 		},
@@ -202,34 +162,24 @@ func redactArgs(args []string) []string {
 
 func handler(w http.ResponseWriter, r *http.Request) {
 	mw := &metricsResponseWriter{ResponseWriter: w}
-	path := r.URL.Path
-	method := r.Method
-	httpRequestsTotal.WithLabelValues(path, method).Inc()
-
 	result := "success"
 	conversionType := ""
 	domainLabel := "unknown"
 	conversionStarted := false
 	conversionStart := time.Time{}
-	requestStart := time.Now()
 	defer func() {
-		code := mw.status
-		if code == 0 {
-			code = http.StatusOK
-		}
-		codeStr := strconv.Itoa(code)
-		httpResponsesTotal.WithLabelValues(path, method, codeStr).Inc()
-		httpRequestDurationSeconds.WithLabelValues(path, method, codeStr).Observe(time.Since(requestStart).Seconds())
 		if conversionStarted {
 			conversionsTotal.WithLabelValues(conversionType, domainLabel, result).Inc()
 			conversionDurationSeconds.WithLabelValues(conversionType, domainLabel, result).Observe(time.Since(conversionStart).Seconds())
 			conversionOutputBytesTotal.WithLabelValues(conversionType, domainLabel, result).Add(float64(mw.bytes))
-			conversionsInFlight.WithLabelValues(conversionType, domainLabel).Dec()
 		}
 	}()
 
 	if r.URL.Path == "/status" {
 		mw.WriteHeader(http.StatusOK)
+		return
+	} else if r.URL.Path == "/metrics" || r.URL.Path == "/metrics/" {
+		MetricsHandler(mw, r)
 		return
 	} else {
 		// don't log status
@@ -338,7 +288,6 @@ func handler(w http.ResponseWriter, r *http.Request) {
 	}
 	conversionStarted = true
 	conversionStart = time.Now()
-	conversionsInFlight.WithLabelValues(conversionType, domainLabel).Inc()
 
 	var redactedArgs = redactArgs(args)
 
@@ -381,7 +330,7 @@ func handler(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
-	http.Handle("/metrics", promhttp.Handler())
+	http.HandleFunc("/metrics", MetricsHandler)
 	http.HandleFunc("/", handler)
 	http.HandleFunc("/pdf", handler)
 	http.HandleFunc("/image", handler)
