@@ -1,7 +1,7 @@
 // Copyright (c) 2019 ACSONE SA/NV
 // Distributed under the MIT License (http://opensource.org/licenses/MIT)
 
-package main
+package kwkhtmlclient
 
 import (
 	"bytes"
@@ -14,6 +14,16 @@ import (
 )
 
 const chunkSize = 32 * 1024
+
+var ErrServerURLNotSet = errors.New("KWKHTMLTOPDF_SERVER_URL not set")
+
+func ServerURLFromEnv() (string, error) {
+	serverURL := os.Getenv("KWKHTMLTOPDF_SERVER_URL")
+	if serverURL == "" {
+		return "", ErrServerURLNotSet
+	}
+	return serverURL, nil
+}
 
 func addOption(w *multipart.Writer, option string) error {
 	return w.WriteField("option", option)
@@ -33,35 +43,36 @@ func addFile(w *multipart.Writer, filename string) error {
 	return err
 }
 
-func do() error {
-	var err error
-	var out *os.File
-
-	serverURL := os.Getenv("KWKHTMLTOPDF_SERVER_URL")
+// Run performs a request against the given endpoint (e.g. "/pdf" or "/image")
+// on the server at serverURL.
+//
+// The behavior matches the original single-file Go client:
+// - if args is empty, "-h" is sent
+// - if the last argument looks like an output file, it is created and used
+// - file arguments are sent as multipart file parts
+func Run(serverURL, endpointPath string, args []string, stdout io.Writer) error {
 	if serverURL == "" {
-		return errors.New("KWKHTMLTOPDF_SERVER_URL not set")
+		return ErrServerURLNotSet
 	}
-
-	// detect if last argument is output file, and create it
-	args := os.Args[1:]
 	if len(args) == 0 {
 		args = []string{"-h"}
 	}
+
+	out := stdout
 	if len(args) >= 2 && !strings.HasPrefix(args[len(args)-1], "-") && !strings.HasPrefix(args[len(args)-2], "-") {
-		out, err = os.Create(args[len(args)-1])
+		file, err := os.Create(args[len(args)-1])
 		if err != nil {
 			return err
 		}
-		defer out.Close()
+		defer file.Close()
+		out = file
 		args = args[:len(args)-1]
-	} else {
-		out = os.Stdout
 	}
 
-	// prepare request
 	var postBuf bytes.Buffer
 	w := multipart.NewWriter(&postBuf)
 	for _, arg := range args {
+		var err error
 		if arg == "-" {
 			return errors.New("stdin/stdout input is not implemented")
 		} else if strings.HasPrefix(arg, "-") {
@@ -72,7 +83,7 @@ func do() error {
 			err = addOption(w, arg)
 		} else if strings.HasPrefix(arg, "file://") {
 			err = addFile(w, arg[7:])
-		} else if _, err := os.Stat(arg); err == nil {
+		} else if _, statErr := os.Stat(arg); statErr == nil {
 			// TODO: better way to detect file arguments
 			err = addFile(w, arg)
 		} else {
@@ -82,10 +93,10 @@ func do() error {
 			return err
 		}
 	}
-	w.Close()
+	_ = w.Close()
 
-	// post request
-	resp, err := http.Post(serverURL, w.FormDataContentType(), &postBuf)
+	endpoint := serverURL + endpointPath
+	resp, err := http.Post(endpoint, w.FormDataContentType(), &postBuf)
 	if err != nil {
 		return err
 	}
@@ -94,7 +105,6 @@ func do() error {
 		return errors.New("server error, consult server log for details")
 	}
 
-	// read response
 	respBuf := make([]byte, chunkSize)
 	for {
 		nr, er := resp.Body.Read(respBuf)
@@ -113,13 +123,4 @@ func do() error {
 	}
 
 	return nil
-}
-
-func main() {
-	err := do()
-	if err != nil {
-		os.Stderr.WriteString(err.Error())
-		os.Stderr.WriteString("\n")
-		os.Exit(-1)
-	}
 }
