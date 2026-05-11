@@ -1,0 +1,8 @@
+resources:
+  - deployment.yaml
+  - service.yaml
+
+images:
+  - name: kwkhtmltopdf
+    newName: ghcr.io/acsone/kwkhtmltopdf
+    newTag: 0.12.6.1-latest
