@@ -40,7 +40,7 @@ There are two clients:
 ### Run the server
 
 ```
-$ docker run --rm -p 8080:8080 ghcr.io/acsone/kwkhtmltopdf:0.12.6.1-latest
+$ docker run --rm -p 8080:8080 ghcr.io/acsone/kwkhtmltopdf/0.12.6.1:latest
 ```
 
 or
