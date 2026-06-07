@@ -4,6 +4,8 @@ on:
   push:
     branches:
       - master
+    tags:
+      - "*"
   schedule:
     - cron: "0 4 * * 0"
 
@@ -12,7 +14,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        tag:
+        wkhtmltox_version:
           - "0.12.1.3"
           - "0.12.5"
           - "0.12.6.1"
@@ -26,14 +28,22 @@ jobs:
           registry: ghcr.io
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Docker metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: |
+            ghcr.io/${{ github.repository }}/${{ matrix.wkhtmltox_version }}
+          tags: |
+            type=ref,event=branch,enable={{is_default_branch}}
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
       - name: Build image
         uses: docker/build-push-action@v7
         with:
-          tags: |
-            ghcr.io/${{ github.repository }}:${{ matrix.tag }}-latest
-          labels: |
-            org.opencontainers.image.source=${{ github.event.repository.html_url }}
-          file: Dockerfile-${{ matrix.tag }}
-          cache-from: type=registry,ref=ghcr.io/${{ github.repository }}:${{ matrix.tag }}-latest
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          file: Dockerfile-${{ matrix.wkhtmltox_version }}
+          cache-from: type=registry,ref=ghcr.io/${{ github.repository }}/${{ matrix.wkhtmltox_version }}:master
           cache-to: type=inline
           push: true
