@@ -29,6 +29,14 @@ func wkhtmltopdfBin() string {
 	return "wkhtmltopdf"
 }
 
+func wkhtmltoimageBin() string {
+	bin := os.Getenv("KWKHTMLTOIMAGE_BIN")
+	if bin != "" {
+		return bin
+	}
+	return "wkhtmltoimage"
+}
+
 func isDocOption(arg string) bool {
 	switch arg {
 	case
@@ -96,8 +104,8 @@ func handler(w http.ResponseWriter, r *http.Request) {
 		httpError(w, errors.New("http method not allowed: "+r.Method), http.StatusMethodNotAllowed)
 		return
 	}
-	if r.URL.Path != "/" && r.URL.Path != "/pdf" {
-		// handle / and /pdf, keep the rest for future use
+	if r.URL.Path != "/" && r.URL.Path != "/pdf" && r.URL.Path != "/image" {
+		// handle /, /pdf, and /image, keep the rest for future use
 		httpError(w, errors.New("path not found: "+r.URL.Path), http.StatusNotFound)
 		return
 	}
@@ -159,8 +167,14 @@ func handler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	// determine if this is an image request
+	isImageRequest := r.URL.Path == "/image"
+
 	if docOutput {
 		w.Header().Add("Content-Type", "text/plain")
+	} else if isImageRequest {
+		w.Header().Add("Content-Type", "image/png")
+		args = append(args, "-")
 	} else {
 		w.Header().Add("Content-Type", "application/pdf")
 		args = append(args, "-")
@@ -170,7 +184,12 @@ func handler(w http.ResponseWriter, r *http.Request) {
 
 	log.Println(redactedArgs, "starting")
 
-	cmd := exec.Command(wkhtmltopdfBin(), args...)
+	var cmd *exec.Cmd
+	if isImageRequest {
+		cmd = exec.Command(wkhtmltoimageBin(), args...)
+	} else {
+		cmd = exec.Command(wkhtmltopdfBin(), args...)
+	}
 	cmdStdout, err := cmd.StdoutPipe()
 	if err != nil {
 		httpError(w, err, http.StatusInternalServerError)
@@ -199,6 +218,9 @@ func handler(w http.ResponseWriter, r *http.Request) {
 
 func main() {
 	http.HandleFunc("/", handler)
+	http.HandleFunc("/pdf", handler)
+	http.HandleFunc("/image", handler)
 	log.Println("kwkhtmltopdf server listening on port 8080")
+	log.Println("Available endpoints: / (PDF), /pdf (PDF), /image (Image), /status (Health check)")
 	log.Fatal(http.ListenAndServe(":8080", nil))
 }
