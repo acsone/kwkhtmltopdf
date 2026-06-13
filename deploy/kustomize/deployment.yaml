@@ -1,0 +1,21 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kwkhtmltopdf
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: kwkhtmltopdf
+  template:
+    metadata:
+      labels:
+        app: kwkhtmltopdf
+    spec:
+      containers:
+        - name: kwkhtmltopdf
+          image: kwkhtmltopdf
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8080
+              protocol: TCP
