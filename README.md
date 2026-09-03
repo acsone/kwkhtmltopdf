@@ -48,10 +48,20 @@ $ docker run --rm -p 8080:8080 ghcr.io/acsone/kwkhtmltopdf/0.12.6.1:latest
 or
 
 ```
-$ go run server/kwkhtmltopdf_server.go
+$ go run ./server
 ```
 
 The server should now listen on http://localhost:8080.
+
+#### Server configuration
+
+| Environment variable | Default | Description |
+| --- | --- | --- |
+| `KWKHTMLTOPDF_BIN` | `wkhtmltopdf` | Path to the wkhtmltopdf binary. |
+| `KWKHTMLTOIMAGE_BIN` | `wkhtmltoimage` | Path to the wkhtmltoimage binary. |
+| `KWKHTMLTOPDF_TIMEOUT` | `120` | Seconds a render may run before it is killed. Set to `0` to disable. |
+
+A render is also killed as soon as the client disconnects.
 
 #### Note for Apple Silicon users
 
